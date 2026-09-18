@@ -1,0 +1,46 @@
+[
+  {
+    "id": "cloud-infra-2026",
+    "title": "Fourniture de services d'infrastructure cloud hybride et support technique",
+    "buyer": "Canton de Vaud - Direction des systèmes d'information",
+    "location": "Lausanne, VD",
+    "publication_date": "2026-08-15",
+    "submission_deadline": "2026-11-02",
+    "url": "https://www.simap.ch/shabforms/servlet/Search?example=cloud-infra-2026",
+    "source": "local_sample",
+    "scope": "Exploitation et support d'une infrastructure cloud hybride (data center + cloud public) pour les services cantonaux, incluant support technique 24/7 et modernisation progressive du data center existant."
+  },
+  {
+    "id": "cybersec-managed-2026",
+    "title": "Services de cybersécurité managés pour l'administration cantonale",
+    "buyer": "État de Genève - Office cantonal des systèmes d'information",
+    "location": "Genève, GE",
+    "publication_date": "2026-09-01",
+    "submission_deadline": "2026-09-29",
+    "url": "https://www.simap.ch/shabforms/servlet/Search?example=cybersec-managed-2026",
+    "source": "local_sample",
+    "scope": "Surveillance de sécurité 24/7 (SOC managé), réponse aux incidents et durcissement de l'infrastructure réseau pour l'ensemble des directions cantonales."
+  },
+  {
+    "id": "datacenter-modernization-2026",
+    "title": "Modernisation du centre de données et services réseau",
+    "buyer": "Ville de Zurich - Organisation und Informatik",
+    "location": "Zürich, ZH",
+    "publication_date": "2026-07-20",
+    "submission_deadline": "2026-10-05",
+    "url": "https://www.simap.ch/shabforms/servlet/Search?example=datacenter-modernization-2026",
+    "source": "local_sample",
+    "scope": "Renouvellement de l'infrastructure hyperconvergée du centre de données municipal et mise à niveau des services réseau et de sauvegarde."
+  },
+  {
+    "id": "office-furniture-2026",
+    "title": "Fourniture de mobilier de bureau pour les administrations communales",
+    "buyer": "Commune de Sion",
+    "location": "Sion, VS",
+    "publication_date": "2026-08-05",
+    "submission_deadline": "2026-10-20",
+    "url": "https://www.simap.ch/shabforms/servlet/Search?example=office-furniture-2026",
+    "source": "local_sample",
+    "scope": "Fourniture, livraison et installation de mobilier de bureau (bureaux, sièges, rangements) pour plusieurs bâtiments administratifs communaux."
+  }
+]

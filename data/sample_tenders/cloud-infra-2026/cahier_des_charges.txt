@@ -1,0 +1,44 @@
+PERIMETRE:
+Le pouvoir adjudicateur recherche un prestataire pour la fourniture, l'exploitation
+et le support d'une infrastructure cloud hybride (data center + cloud public) pour
+l'ensemble des services cantonaux, incluant support technique 24/7 et modernisation
+progressive du data center existant.
+
+EXIGENCES OBLIGATOIRES:
+- Le soumissionnaire doit disposer d'une certification ISO/IEC 27001 valide. [section 4.1]
+- Le soumissionnaire doit justifier d'une couverture d'assurance responsabilité civile
+  professionnelle d'au moins CHF 5'000'000. [section 4.2]
+
+CRITERES ELIGIBILITE:
+- Le soumissionnaire doit être inscrit au registre du commerce suisse ou disposer d'un
+  établissement stable en Suisse. [section 3.1]
+
+EXIGENCES TECHNIQUES:
+- Le prestataire doit proposer une solution d'infrastructure hyperconvergée avec
+  redondance géographique sur au moins 2 sites. [section 5.1]
+- Support technique 24/7 avec un temps de réponse maximum de 4h pour les incidents
+  critiques. [section 5.4]
+- Capacité de modernisation progressive du data center existant vers une architecture
+  cloud hybride. [section 5.6]
+- Mise en place de services réseau sécurisés entre le data center et le cloud public. [section 5.7]
+
+EXIGENCES COMMERCIALES:
+- Le contrat est conclu pour une durée initiale de 3 ans, renouvelable 2 fois 1 an. [section 6.1]
+
+CRITERES EVALUATION:
+- Prix: 40% [section 7]
+- Qualité technique de l'offre: 35% [section 7]
+- Délai de mise en oeuvre: 15% [section 7]
+- Développement durable: 10% [section 7]
+
+CERTIFICATIONS REQUISES:
+- ISO/IEC 27001 [section 4.1]
+- ISO 9001 (souhaitée, non obligatoire) [section 4.1]
+
+REFERENCES REQUISES:
+- Au moins 2 références de projets d'infrastructure cloud ou data center réalisés en
+  Suisse au cours des 5 dernières années. [section 4.3]
+
+RISQUES:
+- Délai de mise en oeuvre technique important (redondance géographique sur 2 sites).
+- Dépendance à la disponibilité de personnel certifié cloud hybride.

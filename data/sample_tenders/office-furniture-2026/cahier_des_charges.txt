@@ -1,0 +1,33 @@
+TITRE: Fourniture de mobilier de bureau pour les administrations communales
+POUVOIR ADJUDICATEUR: Commune de Sion
+LIEU: Sion, VS
+DATE DE PUBLICATION: 2026-08-05
+DELAI DE SOUMISSION: 2026-10-20
+
+PERIMETRE:
+Fourniture, livraison et installation de mobilier de bureau (bureaux, sièges,
+rangements) pour plusieurs bâtiments administratifs communaux. Échantillon
+synthétique pour la démo hackathon — ne correspond à aucun marché réel.
+
+EXIGENCES OBLIGATOIRES:
+- Le soumissionnaire doit fournir et installer du mobilier de bureau ergonomique
+  certifié conforme aux normes EN 1335. [section 4.1]
+
+CRITERES ELIGIBILITE:
+- Le soumissionnaire doit être inscrit au registre du commerce suisse. [section 3.1]
+
+EXIGENCES TECHNIQUES:
+- Livraison et montage sur site dans un délai de 6 semaines après commande. [section 5.1]
+- Garantie minimale de 5 ans sur le mobilier fourni. [section 5.2]
+
+EXIGENCES COMMERCIALES:
+- Contrat-cadre de fourniture sur 2 ans. [section 6.1]
+
+CRITERES EVALUATION:
+- Prix: 60% [section 7]
+- Qualité et durabilité du mobilier: 30% [section 7]
+- Délai de livraison: 10% [section 7]
+
+REFERENCES REQUISES:
+- Au moins 2 références de fourniture de mobilier de bureau à des collectivités
+  suisses. [section 4.2]

@@ -1,0 +1,34 @@
+PERIMETRE:
+Renouvellement de l'infrastructure hyperconvergée du centre de données municipal et
+mise à niveau des services réseau et de sauvegarde, incluant un volet de conseil pour
+la stratégie de modernisation à moyen terme.
+
+EXIGENCES OBLIGATOIRES:
+- Le soumissionnaire doit démontrer au moins 1 référence de modernisation de centre de
+  données en Suisse au cours des 5 dernières années. [section 4.1]
+
+CRITERES ELIGIBILITE:
+- Le soumissionnaire doit être inscrit au registre du commerce suisse ou disposer d'un
+  établissement stable en Suisse. [section 3.1]
+
+EXIGENCES TECHNIQUES:
+- Renouvellement de l'infrastructure hyperconvergée (calcul, stockage, virtualisation). [section 5.1]
+- Modernisation des services réseau du centre de données. [section 5.2]
+- Mise à niveau de la solution de sauvegarde et reprise après sinistre. [section 5.3]
+- Accompagnement en conseil pour la feuille de route de modernisation à moyen terme. [section 5.4]
+
+EXIGENCES COMMERCIALES:
+- Projet livré en mode forfaitaire sur 18 mois, avec support technique inclus pendant
+  12 mois après mise en production. [section 6.1]
+
+CRITERES EVALUATION:
+- Prix: 35% [section 7]
+- Qualité technique de la solution: 40% [section 7]
+- Expérience et références: 15% [section 7]
+- Délai de mise en oeuvre: 10% [section 7]
+
+REFERENCES REQUISES:
+- Au moins 1 référence de modernisation de centre de données en Suisse. [section 4.1]
+
+RISQUES:
+- Fenêtre de bascule du centre de données existant à planifier avec précaution.

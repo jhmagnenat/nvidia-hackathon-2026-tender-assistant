@@ -33,12 +33,17 @@ yarn-error.log*
 # Logs
 *.log
 
-# Local tender documents (non-public / potentially large — see their README)
-data/sample_tenders/*
-!data/sample_tenders/README.md
+# Local tender documents — real/large PDFs are not committed (non-public and/or
+# potentially large). The synthetic sample .txt fixtures under data/sample_tenders/*/
+# are committed intentionally so the local-fallback demo works out of the box.
+data/sample_tenders/**/*.pdf
+data/sample_tenders/**/*.docx
 
-# Real company profile (keep only the .example.json in git)
-data/company_profile.json
+# Runtime-generated human-review/feedback log (local demo state, not a fixture)
+data/feedback_log.json
+
+# Streamlit secrets (unused by this app, but never commit if added later)
+.streamlit/secrets.toml
 
 # Private Hermes state and rendered ingress
 .hermes/

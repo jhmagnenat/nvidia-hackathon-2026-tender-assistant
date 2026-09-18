@@ -1,0 +1,37 @@
+PERIMETRE:
+Surveillance de sécurité 24/7 (SOC managé), réponse aux incidents et durcissement
+de l'infrastructure réseau pour l'ensemble des directions cantonales.
+
+EXIGENCES OBLIGATOIRES:
+- Le soumissionnaire doit exploiter un centre opérationnel de sécurité (SOC) actif
+  24 heures sur 24, 7 jours sur 7. [section 4.1]
+- Le soumissionnaire doit disposer d'une certification SOC 2 Type II valide pour son
+  centre opérationnel de sécurité. [section 4.2]
+
+CRITERES ELIGIBILITE:
+- Le soumissionnaire doit être inscrit au registre du commerce suisse ou disposer d'un
+  établissement stable en Suisse. [section 3.1]
+
+EXIGENCES TECHNIQUES:
+- Détection et réponse aux incidents (SOC/SIEM) avec temps de détection maximal de
+  15 minutes. [section 5.1]
+- Durcissement de l'infrastructure réseau et gestion des vulnérabilités. [section 5.2]
+- Rapports mensuels de posture de sécurité. [section 5.3]
+
+EXIGENCES COMMERCIALES:
+- Contrat-cadre de 2 ans avec possibilité de reconduction annuelle. [section 6.1]
+
+CRITERES EVALUATION:
+- Prix: 30% [section 7]
+- Maturité technique du SOC proposé: 45% [section 7]
+- Délai de mise en oeuvre: 25% [section 7]
+
+CERTIFICATIONS REQUISES:
+- SOC 2 Type II [section 4.2]
+
+REFERENCES REQUISES:
+- Au moins 1 référence de SOC managé pour une entité publique suisse. [section 4.3]
+
+RISQUES:
+- Délai de soumission très court (moins de 4 semaines depuis la publication).
+- Exigence de disponibilité 24/7 dès le démarrage du contrat.

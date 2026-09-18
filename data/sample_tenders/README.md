@@ -1,19 +1,23 @@
 # Sample tenders
 
-Drop 3–5 real simap.ch tender PDFs here for local testing. Tender documents
-themselves are **not committed** (see `.gitignore`) — they may not be freely
-redistributable and can be large; only this README is tracked.
-
-Expected layout — one subfolder per tender, containing all of its documents
-(notice, cahier des charges, annexes):
+`../sample_tenders.json` is the local search-fallback index (used when SIMAP/Tavily
+are unavailable — see `src/adapters/tender_search.py`). Each entry's `id` maps to a
+subfolder here containing that tender's documents:
 
 ```
 data/sample_tenders/
-  <tender-id-or-slug>/
-    notice.pdf
-    cahier_des_charges.pdf
-    annexe_a.pdf
-    ...
+  <tender-id>/
+    notice.txt
+    cahier_des_charges.txt
 ```
 
-`src/pipeline.py` takes a tender folder path and globs `*.pdf` inside it.
+These `.txt` fixtures are **synthetic, hackathon-demo data** — clearly not real
+simap.ch tenders — written in a section-header format
+(`TITRE:`, `EXIGENCES OBLIGATOIRES:`, `CERTIFICATIONS REQUISES:`, ...) that
+`src/agents/ingestion.py`'s deterministic parser reads. They are committed to git
+(unlike real tender PDFs, which are not freely redistributable and are excluded via
+`.gitignore`).
+
+To point the pipeline at real tenders instead: drop real PDFs/text files into a new
+subfolder here and add a matching entry to `../sample_tenders.json`, or wire up the
+SIMAP/Tavily adapters once those services are reachable from this environment.

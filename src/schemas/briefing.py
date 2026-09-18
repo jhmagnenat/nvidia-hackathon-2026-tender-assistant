@@ -1,4 +1,4 @@
-"""Qualification briefing — the final output contract, produced by Track C."""
+"""Qualification briefing — the final output contract, produced by the HPEQualificationAgent."""
 
 from datetime import datetime
 from enum import Enum
@@ -6,27 +6,17 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from src.schemas.common import Citation
-from src.schemas.tender import AwardCriterion, Deadline, EligibilityCriterion
+from src.schemas.common import Citation, Confidence, MatchStatus, Recommendation
+from src.schemas.tender import Deadline, Requirement, Tender
 
 
-class EligibilityStatus(str, Enum):
-    PASS = "pass"
-    FAIL = "fail"
-    UNKNOWN = "unknown"  # insufficient info in company profile / tender to decide
-
-
-class EligibilityResult(BaseModel):
-    criterion: EligibilityCriterion
-    status: EligibilityStatus
+class CapabilityMatch(BaseModel):
+    requirement_id: str
+    requirement_description: str
+    status: MatchStatus
+    hpe_capability: str | None = Field(default=None, description="Matched HPE capability/certification name, if any")
     justification: str
-
-
-class AwardCriterionScore(BaseModel):
-    criterion: AwardCriterion
-    score: float = Field(..., ge=0, le=100, description="Fit score for this criterion alone")
-    weighted_score: float = Field(..., description="score * (weight_percent / 100)")
-    justification: str
+    citation: Citation | None = None
 
 
 class RiskFlag(BaseModel):
@@ -35,21 +25,56 @@ class RiskFlag(BaseModel):
     citation: Citation | None = None
 
 
-class GoNoGoRecommendation(str, Enum):
-    GO = "go"
-    NO_GO = "no_go"
-    CONDITIONAL = "conditional"
+class ScoreBreakdown(BaseModel):
+    """Transparent point allocation. Max points: 30/25/15/10/10/10 = 100."""
+
+    capability_fit: float = Field(..., ge=0, le=30)
+    mandatory_requirement_fit: float = Field(..., ge=0, le=25)
+    eligibility_fit: float = Field(..., ge=0, le=15)
+    delivery_feasibility: float = Field(..., ge=0, le=10)
+    strategic_relevance: float = Field(..., ge=0, le=10)
+    information_confidence: float = Field(..., ge=0, le=10)
+    explanation: str
+
+    @property
+    def total(self) -> float:
+        return (
+            self.capability_fit
+            + self.mandatory_requirement_fit
+            + self.eligibility_fit
+            + self.delivery_feasibility
+            + self.strategic_relevance
+            + self.information_confidence
+        )
+
+
+class HumanDecision(str, Enum):
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    MORE_RESEARCH = "more_research"
+
+
+class HumanReview(BaseModel):
+    decision: HumanDecision | None = None
+    reviewer: str | None = None
+    notes: str | None = None
+    timestamp: datetime | None = None
 
 
 class QualificationBriefing(BaseModel):
-    tender_title: str
-    contracting_authority: str | None = None
+    tender: Tender
+    recommendation: Recommendation
+    score: float = Field(..., ge=0, le=100)
+    score_breakdown: ScoreBreakdown
+    confidence: Confidence
+    executive_summary: str
     deadlines: list[Deadline] = Field(default_factory=list)
-    eligibility_results: list[EligibilityResult] = Field(default_factory=list)
-    eligibility_gate_passed: bool
-    award_criteria_scores: list[AwardCriterionScore] = Field(default_factory=list)
-    overall_fit_score: float | None = Field(default=None, description="None if the eligibility gate failed")
+    mandatory_requirements: list[Requirement] = Field(default_factory=list)
+    capability_matches: list[CapabilityMatch] = Field(default_factory=list)
+    gaps: list[str] = Field(default_factory=list)
     risks: list[RiskFlag] = Field(default_factory=list)
-    recommendation: GoNoGoRecommendation
-    recommendation_justification: str
+    unknowns: list[str] = Field(default_factory=list)
+    next_actions: list[str] = Field(default_factory=list)
+    citations: list[Citation] = Field(default_factory=list)
+    human_review: HumanReview = Field(default_factory=HumanReview)
     generated_at: datetime

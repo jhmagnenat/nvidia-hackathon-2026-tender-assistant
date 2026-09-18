@@ -7,6 +7,7 @@ readme = "README.md"
 dependencies = [
     "pydantic>=2.7",
     "python-dotenv>=1.0",
+    "streamlit>=1.60",
 ]
 
 [project.optional-dependencies]
@@ -14,9 +15,12 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.5",
 ]
-# Track A will likely add a PDF parsing library here (e.g. pypdf / pdfplumber / unstructured).
-# Orchestration may add the NVIDIA NeMo Agent Toolkit here once we've validated its
-# hackathon-time setup cost — see docs/architecture.md "Orchestration".
+# No PDF parsing library is used: the local-fallback sample tenders are plain
+# .txt fixtures (see data/sample_tenders/README.md), and real document retrieval
+# (SIMAP/Tavily/URL) is not reachable from this environment — see
+# IMPLEMENTATION_LOG.md Phase 0. Orchestration may add the NVIDIA NeMo Agent
+# Toolkit here once it's actually reachable — see docs/architecture.md
+# "Orchestration".
 
 [project.scripts]
 agentic-tender = "src.pipeline:main"
