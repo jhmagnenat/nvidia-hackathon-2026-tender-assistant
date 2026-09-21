@@ -23,13 +23,29 @@ User query -> tender search -> tender selection -> document retrieval
 
 ## Availability of NVIDIA/MCP components in this environment
 
-None of NeMo Agent Toolkit, NemoClaw, Hermes, AIQ Blueprint, a generic MCP
-client, or Tavily are reachable from this environment (no CLI, no package, no
-API key — see IMPLEMENTATION_LOG.md Phase 0 for the exact checks run). The
-SIMAP MCP config under `integrations/simap/` targets a *separate* external
-Hermes sandbox, not this one. **The app therefore runs entirely on local
-fallback data by design (rule 6), with clean adapter seams
-(`src/adapters/`) so a real integration is additive, not a rewrite.**
+None of NeMo Agent Toolkit, NemoClaw, Hermes, AIQ Blueprint, or Tavily are
+reachable from this environment (no CLI, no package, no API key — see
+IMPLEMENTATION_LOG.md Phase 0 for the exact checks run). The
+`nemohermes`/`hermes` CLIs and the sandbox paths in
+`integrations/simap/hermes-config.example.yaml` target a *separate* external
+Hermes sandbox, not this one.
+
+Since Phase 11/14, a generic MCP client **is** wired in (the `mcp` Python
+package — used both by `src/mcp_server.py`, this app's own MCP server, and by
+`src/adapters/tender_search.py`'s `SimapAdapter`, a real MCP client for the
+`@digilac/simap-mcp` stdio server) — the search-adapter seam is no longer a
+hardcoded stub. It is still unconfigured/unavailable *in this environment*
+(no `SIMAP_MCP_ENTRYPOINT`, no reachable proxy/CA — see
+`integrations/simap/README.md` "Troubleshooting"), so `WorkflowOrchestrator`
+still resolves to `LocalSampleSearchAdapter` here, same as before. **The app
+therefore still runs entirely on local fallback data in this environment by
+design (rule 6)** — but the adapter seam (`src/adapters/`) is now real code,
+not a placeholder, so pointing it at a reachable deployment is additive
+configuration, not a rewrite. Hermes's chat UI and this app remain two
+separate consumers of the same underlying SIMAP MCP package — this app does
+not call Hermes itself (no such endpoint is documented anywhere in this
+repo), and nothing here should be read as "Streamlit uses SIMAP MCP" unless
+a `SimapAdapter.search()` call has actually succeeded.
 
 ## Repo structure
 

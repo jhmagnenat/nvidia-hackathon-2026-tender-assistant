@@ -3,8 +3,8 @@ from datetime import date
 from src.agents.briefing import _recommendation, generate_briefing
 from src.agents.eligibility_gate import run_eligibility_gate
 from src.agents.fit_scoring import score_fit
-from src.schemas.briefing import CapabilityMatch
-from src.schemas.common import MatchStatus, Recommendation
+from src.schemas.briefing import AlternativeTender, CapabilityMatch
+from src.schemas.common import MatchStatus, Recommendation, SelectionMode
 
 
 def _match(status: MatchStatus) -> CapabilityMatch:
@@ -42,3 +42,28 @@ def test_generate_briefing_end_to_end(sample_extracted, sample_hpe_profile):
     assert briefing.tender.id == sample_extracted.tender.id
     dumped = briefing.model_dump(mode="json")
     assert dumped["human_review"]["decision"] is None
+    # Not given selection_mode/selection_reason/alternatives here -> must
+    # keep QualificationBriefing's honest "direct" defaults, not fabricate them.
+    assert briefing.selection_mode == SelectionMode.DIRECT
+    assert briefing.alternatives == []
+
+
+def test_generate_briefing_passes_through_selection_metadata(sample_extracted, sample_hpe_profile):
+    gate_matches = run_eligibility_gate(sample_extracted, sample_hpe_profile)
+    breakdown, all_matches = score_fit(sample_extracted, sample_hpe_profile, gate_matches, as_of=date(2026, 9, 18))
+    alternatives = [AlternativeTender(tender_id="t-2", title="Other tender", relevance_score=71.2, rank=1)]
+
+    briefing = generate_briefing(
+        sample_extracted,
+        gate_matches,
+        breakdown,
+        all_matches,
+        selection_mode=SelectionMode.AUTO,
+        selection_reason="Automatically selected because it scored highest.",
+        alternatives=alternatives,
+    )
+
+    assert briefing.selection_mode == SelectionMode.AUTO
+    assert briefing.selection_reason == "Automatically selected because it scored highest."
+    assert briefing.alternatives == alternatives
+    assert briefing.selected_tender_id == sample_extracted.tender.id

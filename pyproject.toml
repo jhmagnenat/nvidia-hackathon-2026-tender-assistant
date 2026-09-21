@@ -8,12 +8,21 @@ dependencies = [
     "pydantic>=2.7",
     "python-dotenv>=1.0",
     "streamlit>=1.60",
+    # Pinned <2: mcp 2.x renamed FastMCP -> MCPServer and changed other APIs.
+    "mcp>=1.9,<2",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
     "ruff>=0.5",
+]
+# Only needed to *run* src/simap_bridge.py inside the NemoClaw sandbox (see
+# deploy/simap-bridge/README.md) or to run its tests — declared explicitly
+# rather than relying on them arriving transitively via `mcp`'s own deps.
+bridge = [
+    "starlette>=0.37",
+    "uvicorn>=0.30",
 ]
 # No PDF parsing library is used: the local-fallback sample tenders are plain
 # .txt fixtures (see data/sample_tenders/README.md), and real document retrieval
@@ -24,6 +33,7 @@ dev = [
 
 [project.scripts]
 agentic-tender = "src.pipeline:main"
+agentic-tender-mcp = "src.mcp_server:main"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

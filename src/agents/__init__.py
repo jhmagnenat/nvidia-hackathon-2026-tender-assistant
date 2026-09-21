@@ -8,6 +8,7 @@ from src.agents import (
     qualification,
     retrieval,
     search,
+    tender_selection,
     workflow,
 )
 
@@ -21,5 +22,6 @@ __all__ = [
     "qualification",
     "retrieval",
     "search",
+    "tender_selection",
     "workflow",
 ]

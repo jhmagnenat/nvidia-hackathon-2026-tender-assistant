@@ -11,9 +11,9 @@ inferred fact.
 from datetime import date, datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
-from src.schemas.common import Citation, Language
+from src.schemas.common import Citation, Language, ResearchMode
 
 
 class TenderSource(str, Enum):
@@ -34,6 +34,32 @@ class Tender(BaseModel):
     url: str | None = None
     source: TenderSource
     scope: str | None = Field(default=None, description="Short free-text scope/description from the listing")
+    publication_id: str | None = Field(
+        default=None,
+        description=(
+            "SIMAP's separate publication UUID (distinct from `id`, which is the project UUID). "
+            "get_tender_details requires both — without this, that tool cannot be called for this "
+            "tender, so a real deadline/status can never be fetched. None for anything not sourced "
+            "from a live SIMAP search_tenders response (local_sample, tavily, or a SIMAP result "
+            "whose 'Publication ID' line was missing) — never guessed or derived from `id`."
+        ),
+    )
+    research_mode: ResearchMode = Field(
+        default=ResearchMode.LOCAL_FALLBACK,
+        description=(
+            "'simap_mcp' only when a live SimapAdapter MCP call produced this result; "
+            "'local_fallback' otherwise (the default, so existing local-sample fixtures "
+            "need no change)."
+        ),
+    )
+
+    @computed_field(
+        description="Same two values as research_mode ('simap_mcp' / 'local_fallback'), "
+        "exposed under the name app.py's source display and external callers key off of."
+    )  # type: ignore[prop-decorator]
+    @property
+    def source_type(self) -> str:
+        return self.research_mode.value
 
 
 class TenderDocument(BaseModel):

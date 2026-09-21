@@ -1,10 +1,26 @@
 # Merge only this server; verify proxy and CA values in the target sandbox.
+#
+# `args` below has two entries after --use-env-proxy: this repo's stderr-only
+# preflight wrapper (integrations/simap/preflight.mjs — upload it to
+# /sandbox/.hermes/mcp/simap/preflight.mjs, same upload flow as the installed
+# package, see README.md "Installation"), then the real simap-mcp entrypoint
+# as its argv[2]. The wrapper prints non-secret env/network diagnostics to
+# stderr and immediately hands off to that real entrypoint in the same
+# process — MCP stdio behavior Hermes sees is unchanged. See README.md
+# "Troubleshooting" for why.
+#
+# The real-entrypoint path below (.../simap/simap-mcp/node_modules/...) is
+# the path confirmed active in this Hermes instance's own SIMAP MCP server
+# entry — it has one more `simap-mcp/` segment than earlier drafts of this
+# file assumed. Verify it still matches the entry shown in Hermes before
+# reusing this file; do not assume it is fixed across deployments.
 mcp_servers:
   simap:
     command: /usr/local/bin/node
     args:
       - --use-env-proxy
-      - /sandbox/.hermes/mcp/simap/node_modules/@digilac/simap-mcp/dist/index.js
+      - /sandbox/.hermes/mcp/simap/preflight.mjs
+      - /sandbox/.hermes/mcp/simap/simap-mcp/node_modules/@digilac/simap-mcp/dist/index.js
     connect_timeout: 10
     lazy: true
     env:
@@ -13,3 +29,10 @@ mcp_servers:
       HTTPS_PROXY: http://10.200.0.1:3128
       NODE_EXTRA_CA_CERTS: /etc/openshell-tls/openshell-ca.pem
       SSL_CERT_FILE: /etc/openshell-tls/ca-bundle.pem
+      # Diagnostic only — safe to leave on for list_cantons/search_tenders
+      # (no secrets in those calls). Does not change behavior, only stderr
+      # verbosity: logs the full request URL and, on success, response
+      # status/size/duration. See README.md "Troubleshooting: Network or
+      # timeout error" — the real cause of that message is only visible in
+      # this server's stderr, never in the Hermes chat text.
+      SIMAP_MCP_DEBUG: "1"

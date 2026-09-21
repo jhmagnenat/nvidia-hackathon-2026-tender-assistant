@@ -124,6 +124,19 @@ def en_risk_description(text: str) -> str:
     return en_or_original(text)
 
 
+_SOURCE_TYPE_LABELS = {"simap_mcp": "SIMAP", "local_fallback": "Local Sample"}
+
+
+def source_label(tender) -> str:
+    """Display label for a Tender's provenance, driven by the real
+    `source_type` computed field ('simap_mcp' only when a live SIMAP MCP
+    call actually produced this result — via SimapBridgeAdapter, the
+    realistic path from this environment, or the direct-stdio SimapAdapter —
+    see src/adapters/tender_search.py, src/adapters/simap_bridge_client.py)
+    — never "SIMAP" just because a card happens to look plausible."""
+    return _SOURCE_TYPE_LABELS.get(tender.source_type, tender.source_type)
+
+
 def render_source_text(text: str) -> None:
     """Render a piece of tender-sourced text: English translation primary,
     original French shown underneath so the citation stays accurate."""
@@ -169,6 +182,11 @@ _SEVERITY_STYLE = {
     "high": (RED, RED_TINT),
     "medium": (AMBER, AMBER_TINT),
     "low": (BLUE, BLUE_TINT),
+}
+_SELECTION_MODE_STYLE = {
+    "auto": (GREEN, "Automatically selected"),
+    "human_override": (BLUE, "Manually selected (human override)"),
+    "direct": (MUTED, "Analyzed directly"),
 }
 _STATUS_STYLE = {
     MatchStatus.MATCH: (GREEN, GREEN_TINT, "✓", "MATCH"),
@@ -357,7 +375,7 @@ def render_review_status_bar(briefing: QualificationBriefing) -> None:
                     unsafe_allow_html=True,
                 )
             else:
-                color, bg = _REVIEW_STATUS_STYLE[status]
+                color, _ = _REVIEW_STATUS_STYLE[status]
                 meta_bits = []
                 if state["reviewer"]:
                     meta_bits.append(f"by {state['reviewer']}")
@@ -384,6 +402,27 @@ def render_review_status_bar(briefing: QualificationBriefing) -> None:
         if not HAS_DIALOG and st.session_state.get(f"show_review_panel_{tender_id}"):
             with st.expander("Review & decide", expanded=True):
                 render_review_form(briefing)
+
+
+def render_selection_panel(briefing: QualificationBriefing) -> None:
+    """Why this tender, not another one — required reading before the human
+    review above. Always shown, expanded whenever a real selection/override
+    decision was made (mode != "direct"), so an automatic pick is never
+    silently presented as if a human had chosen it."""
+    mode = briefing.selection_mode.value
+    color, label = _SELECTION_MODE_STYLE[mode]
+    st.markdown(
+        f'<span class="status-badge" style="color:{color};background:{BG_LIGHT};border:1px solid {color};">{label}</span>',
+        unsafe_allow_html=True,
+    )
+    with st.expander("Why this tender?", expanded=(mode != "direct")):
+        st.write(briefing.selection_reason)
+        if briefing.alternatives:
+            st.markdown("**Alternatives considered (not selected):**")
+            for alt in briefing.alternatives:
+                st.caption(f"{alt.rank}. {en_or_original(alt.title)} (id=`{alt.tender_id}`) — relevance {alt.relevance_score:.1f}/100")
+        elif mode != "direct":
+            st.caption("No other candidates were found in this search.")
 
 
 def render_pending_banner(tender_id: str) -> None:
@@ -500,6 +539,16 @@ if search_clicked:
     st.session_state.tenders = orchestrator.search(query)
     st.session_state.last_query = query
     st.session_state.selected_id = None
+    if st.session_state.tenders:
+        # Automatic selection: score every candidate (cloud infrastructure /
+        # managed services / cybersecurity / HPE capability fit / deadline /
+        # document availability — see src.agents.tender_selection) and
+        # analyze the best one right away, no extra click needed. Per-card
+        # "Analyze" below remains the human-override path.
+        with st.spinner("Scoring candidates and automatically selecting the best tender..."):
+            auto_briefing = orchestrator.run(query, as_of=None, override_tender_id=None)
+        st.session_state.briefings[auto_briefing.tender.id] = auto_briefing
+        st.session_state.selected_id = auto_briefing.tender.id
 
 # ---------------------------------------------------------------------------
 # Results — compact three-column tender grid
@@ -517,7 +566,7 @@ if st.session_state.tenders:
                 deadline_str = (
                     tender.submission_deadline.isoformat() if tender.submission_deadline else "UNKNOWN"
                 )
-                source_str = tender.source.value.replace("_", " ").title()
+                source_str = source_label(tender)
                 st.markdown(
                     f'<div class="tender-card{" selected" if is_selected else ""}">'
                     f'<div class="card-title">{title}</div>'
@@ -536,7 +585,18 @@ if st.session_state.tenders:
                 )
                 if analyze_clicked:
                     with st.spinner("Retrieving documents, extracting requirements, matching against HPE profile..."):
-                        st.session_state.briefings[tender.id] = orchestrator.analyze_tender(tender)
+                        if st.session_state.last_query:
+                            # Human override: re-run the same search's automatic
+                            # scoring, but force this specific candidate — the
+                            # resulting briefing records selection_mode
+                            # "human_override" and what auto-selection would
+                            # have picked instead, so the override stays
+                            # traceable rather than silently replacing it.
+                            st.session_state.briefings[tender.id] = orchestrator.run(
+                                st.session_state.last_query, as_of=None, override_tender_id=tender.id
+                            )
+                        else:
+                            st.session_state.briefings[tender.id] = orchestrator.analyze_tender(tender)
                     st.session_state.selected_id = tender.id
                     st.rerun()
 elif query:
@@ -591,6 +651,7 @@ if briefing:
             unsafe_allow_html=True,
         )
 
+    render_selection_panel(briefing)
     render_review_status_bar(briefing)
 
     days_left = None

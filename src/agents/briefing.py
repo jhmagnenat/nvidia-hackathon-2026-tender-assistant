@@ -19,13 +19,14 @@ from datetime import UTC, datetime
 
 from src.agents.eligibility_gate import gate_has_hard_failure, gate_has_unknown
 from src.schemas.briefing import (
+    AlternativeTender,
     CapabilityMatch,
     HumanReview,
     QualificationBriefing,
     RiskFlag,
     ScoreBreakdown,
 )
-from src.schemas.common import Confidence, MatchStatus, Recommendation
+from src.schemas.common import Confidence, MatchStatus, Recommendation, SelectionMode
 from src.schemas.tender import ExtractedTenderData
 
 _GO_THRESHOLD = 70
@@ -128,8 +129,18 @@ def generate_briefing(
     gate_matches: list[CapabilityMatch],
     score_breakdown: ScoreBreakdown,
     all_matches: list[CapabilityMatch],
+    selection_mode: SelectionMode | None = None,
+    selection_reason: str | None = None,
+    alternatives: list[AlternativeTender] | None = None,
 ) -> QualificationBriefing:
-    """Assemble the final QualificationBriefing from upstream agent outputs."""
+    """Assemble the final QualificationBriefing from upstream agent outputs.
+
+    `selection_mode`/`selection_reason`/`alternatives` are optional — left
+    `None`, `QualificationBriefing`'s own defaults apply (`selection_mode`
+    "direct", a generic honest reason, no alternatives), so every
+    pre-existing caller is unaffected. Set by `src.agents.tender_selection`
+    via `WorkflowOrchestrator.run`'s automatic-selection path.
+    """
     score = round(score_breakdown.total, 1)
     recommendation, recommendation_reason = _recommendation(score, gate_matches)
     confidence = _confidence(score_breakdown)
@@ -144,6 +155,17 @@ def generate_briefing(
         f"Recommendation: {recommendation.value} (score {score:.1f}/100, confidence {confidence.value}). "
         f"{recommendation_reason}"
     )
+
+    # Optional selection-metadata kwargs: only pass through what the caller
+    # actually provided, so QualificationBriefing's own field defaults apply
+    # exactly as before when none of it was given.
+    selection_kwargs: dict = {}
+    if selection_mode is not None:
+        selection_kwargs["selection_mode"] = selection_mode
+    if selection_reason is not None:
+        selection_kwargs["selection_reason"] = selection_reason
+    if alternatives is not None:
+        selection_kwargs["alternatives"] = alternatives
 
     return QualificationBriefing(
         tender=tender,
@@ -167,4 +189,5 @@ def generate_briefing(
         citations=citations,
         human_review=HumanReview(),
         generated_at=datetime.now(UTC),
+        **selection_kwargs,
     )

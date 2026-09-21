@@ -85,9 +85,18 @@ def main() -> None:
     analyze_parser.add_argument("--out", type=Path, default=None)
     _add_review_flags(analyze_parser)
 
-    run_parser = subparsers.add_parser("run", parents=[common], help="Search, auto-select the top result, and produce a briefing")
+    run_parser = subparsers.add_parser(
+        "run", parents=[common], help="Search, automatically select the best-relevance result, and produce a briefing"
+    )
     run_parser.add_argument("query")
     run_parser.add_argument("--out", type=Path, default=None)
+    run_parser.add_argument(
+        "--override",
+        dest="override_tender_id",
+        default=None,
+        help="Force a specific tender id from this search's results instead of the automatic pick "
+        "(selection_mode becomes 'human_override' on the resulting briefing)",
+    )
     _add_review_flags(run_parser)
 
     args = parser.parse_args()
@@ -107,7 +116,13 @@ def main() -> None:
         return
 
     if args.command == "run":
-        briefing = orchestrator.run(args.query, as_of=args.as_of)
+        briefing = orchestrator.run(args.query, as_of=args.as_of, override_tender_id=args.override_tender_id)
+        print(f"Selected: {briefing.selected_tender_id} (selection_mode={briefing.selection_mode.value})")
+        print(briefing.selection_reason)
+        if briefing.alternatives:
+            print("Alternatives considered:")
+            for alt in briefing.alternatives:
+                print(f"  {alt.rank}. {alt.tender_id} — relevance {alt.relevance_score:.1f}/100")
         _maybe_record_review(briefing, args)
         _emit(briefing, args.out)
         return

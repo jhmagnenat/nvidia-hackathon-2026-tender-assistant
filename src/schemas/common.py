@@ -53,3 +53,55 @@ class Confidence(str, Enum):
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
+
+
+class ResearchMode(str, Enum):
+    """Which backend actually produced a `Tender` search result.
+
+    Coarser than `TenderSource` (simap/tavily/local_sample — the specific
+    provider): this is the real-vs-fallback signal a caller can key off of
+    without knowing every provider name. `SIMAP_MCP` is set only by a live,
+    successful call through `src.adapters.tender_search.SimapAdapter`'s real
+    MCP client (see that module) — never assumed just because the adapter is
+    configured. `LOCAL_FALLBACK` covers the local sample index and any other
+    non-live source.
+    """
+
+    SIMAP_MCP = "simap_mcp"
+    LOCAL_FALLBACK = "local_fallback"
+
+
+class SelectionMode(str, Enum):
+    """How a `QualificationBriefing`'s tender was chosen.
+
+    AUTO: automatically selected among multiple search-result candidates by
+    `src.agents.tender_selection`'s relevance scoring. HUMAN_OVERRIDE: a
+    human explicitly picked a different candidate from that same set.
+    DIRECT: the tender was analyzed directly by id/object, with no candidate
+    comparison at all (e.g. `python -m src.pipeline analyze <id>`, or any
+    direct call to `WorkflowOrchestrator.analyze_tender`) — the default, so
+    every existing call site keeps behaving exactly as before.
+    """
+
+    AUTO = "auto"
+    HUMAN_OVERRIDE = "human_override"
+    DIRECT = "direct"
+
+
+class PublicationStatus(str, Enum):
+    """A tender's actionability, per `src.agents.tender_selection`'s SELECT
+    phase — set only from a real signal (a real `pub_type` from a live
+    `get_tender_details` call, or a real known `submission_deadline`), never
+    guessed. `UNKNOWN` is the honest default whenever neither is available
+    (e.g. a local_fallback tender, or a SIMAP tender with no publication_id,
+    or an unreachable SIMAP adapter) — it must never be treated as a
+    confirmed NO-GO on its own; see `classify_publication_status`.
+    """
+
+    UNKNOWN = "unknown"
+    OPEN = "open"
+    ALREADY_AWARDED = "already_awarded"
+    DIRECT_AWARD_NOT_OPEN = "direct_award_not_open"
+    EXPIRED = "expired"
+    REVOKED = "revoked"
+    CANCELLED = "cancelled"

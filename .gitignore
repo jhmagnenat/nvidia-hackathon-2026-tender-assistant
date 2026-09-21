@@ -42,6 +42,14 @@ data/sample_tenders/**/*.docx
 # Runtime-generated human-review/feedback log (local demo state, not a fixture)
 data/feedback_log.json
 
+# Runtime-generated briefings written by the create_briefing MCP tool (local demo
+# state, not a fixture)
+data/briefings/
+
+# Runtime-generated drafts written by the create_draft MCP tool (local demo
+# state, not a fixture)
+data/drafts/
+
 # Streamlit secrets (unused by this app, but never commit if added later)
 .streamlit/secrets.toml
 
