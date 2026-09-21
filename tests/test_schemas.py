@@ -3,10 +3,16 @@
 Keep in sync with src/schemas/.
 """
 
+import json
 from datetime import UTC, datetime
+
+import pytest
+from pydantic import ValidationError
 
 from src.schemas.briefing import AlternativeTender, QualificationBriefing, ScoreBreakdown
 from src.schemas.common import Confidence, Recommendation, ResearchMode, SelectionMode
+from src.schemas.hpe_profile import HPEProfile
+from src.schemas.hpe_research_profile import load_research_profile
 from src.schemas.tender import Tender, TenderSource
 
 
@@ -45,6 +51,48 @@ def test_tender_publication_id_defaults_to_none_and_round_trips():
 def test_hpe_profile_round_trip(sample_hpe_profile):
     restored = sample_hpe_profile.model_validate_json(sample_hpe_profile.model_dump_json())
     assert restored == sample_hpe_profile
+
+
+# --- HPE research profile (V4) -----------------------------------------------
+# data/hpe_profile_research_v4.json / data/hpe_profile_canonical_v4.json —
+# a separate, richer, INCOMPATIBLE schema from HPEProfile above (see
+# src/schemas/hpe_research_profile.py's docstring). Never fed into
+# matching/fit_scoring/eligibility_gate/briefing.
+
+
+def test_hpe_profile_research_v4_is_valid_json():
+    with open("data/hpe_profile_research_v4.json", encoding="utf-8") as f:
+        raw = json.load(f)
+    assert isinstance(raw, dict)
+    for key in ("capabilities", "certifications", "sources", "qualification_rules", "unknowns"):
+        assert key in raw
+
+
+def test_hpe_profile_research_v4_is_incompatible_with_the_live_hpe_profile_schema():
+    """Confirms the Étape 1 finding: the raw V4 shape cannot be loaded
+    directly as HPEProfile (capability_name vs name, certification_name vs
+    name, ...) — this is exactly why a separate adapter schema exists."""
+    with open("data/hpe_profile_research_v4.json", encoding="utf-8") as f:
+        raw = json.load(f)
+
+    with pytest.raises(ValidationError):
+        HPEProfile.model_validate(raw)
+
+
+def test_canonical_research_profile_is_loadable():
+    profile = load_research_profile("data/hpe_profile_canonical_v4.json")
+    assert profile.capabilities
+    assert profile.sources
+    assert profile.qualification_rules.unknown_is_not_match is True
+    assert profile.qualification_rules.mandatory_unknown_caps_recommendation_at == "MAYBE"
+
+
+def test_canonical_research_profile_capability_fields_are_preserved():
+    profile = load_research_profile("data/hpe_profile_canonical_v4.json")
+    compute = next(c for c in profile.capabilities if c.capability_id == "compute_infrastructure")
+    assert compute.capability_name == "Compute and server infrastructure"
+    assert compute.hpe_products_or_platforms  # HPE_products_or_platforms alias resolved
+    assert compute.evidence_sources
 
 
 def test_all_requirements_concatenates_every_category(sample_extracted):

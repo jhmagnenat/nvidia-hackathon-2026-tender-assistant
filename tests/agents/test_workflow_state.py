@@ -4,7 +4,9 @@ from src.agents.briefing import generate_briefing
 from src.agents.eligibility_gate import run_eligibility_gate
 from src.agents.fit_scoring import score_fit
 from src.agents.workflow_state import (
+    get_pending_research_requests,
     load_workflow_state,
+    mark_research_requests_reviewed,
     record_human_decision,
     update_state_after_qualification,
 )
@@ -118,3 +120,42 @@ def test_workflow_state_is_separated_by_tender_id(tmp_path, sample_briefing):
     assert state_a["human_review"]["decision"] is None
     assert state_b["human_review"]["decision"] == "rejected"
     assert load_workflow_state(tmp_path, "does-not-exist-2099") is None
+
+
+def test_get_pending_research_requests_empty_when_no_state_or_no_request(tmp_path, sample_briefing):
+    assert get_pending_research_requests(tmp_path, "does-not-exist-2099") == []
+
+    update_state_after_qualification(tmp_path, sample_briefing)
+    assert get_pending_research_requests(tmp_path, sample_briefing.tender.id) == []
+
+
+def test_get_pending_research_requests_after_more_research(tmp_path, sample_briefing):
+    update_state_after_qualification(tmp_path, sample_briefing)
+    record_human_decision(tmp_path, sample_briefing.tender.id, "more_research", reviewer="jj", comment="Check X")
+
+    pending = get_pending_research_requests(tmp_path, sample_briefing.tender.id)
+
+    assert len(pending) == 1
+    assert pending[0]["status"] == "pending"
+    assert pending[0]["note"] == "Check X"
+
+
+def test_mark_research_requests_reviewed_clears_pending_and_logs_history(tmp_path, sample_briefing):
+    update_state_after_qualification(tmp_path, sample_briefing)
+    record_human_decision(tmp_path, sample_briefing.tender.id, "more_research", reviewer="jj", comment="Check X")
+
+    state = mark_research_requests_reviewed(tmp_path, sample_briefing.tender.id)
+
+    assert get_pending_research_requests(tmp_path, sample_briefing.tender.id) == []
+    assert state["research_requests"][0]["status"] == "reviewed"
+    assert state["research_requests"][0]["reviewed_at"] is not None
+    assert state["history"][-1]["event"] == "research_reviewed"
+
+
+def test_mark_research_requests_reviewed_is_a_noop_without_pending_requests(tmp_path, sample_briefing):
+    update_state_after_qualification(tmp_path, sample_briefing)
+    history_before = list(load_workflow_state(tmp_path, sample_briefing.tender.id)["history"])
+
+    state = mark_research_requests_reviewed(tmp_path, sample_briefing.tender.id)
+
+    assert state["history"] == history_before  # nothing to review -> no new event

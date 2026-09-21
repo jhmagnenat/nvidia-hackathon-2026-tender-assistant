@@ -169,10 +169,57 @@ def record_human_decision(
         state["executive_summary"]["human_review_status"] = status_label
 
     if decision == HumanDecision.MORE_RESEARCH.value:
-        state["research_requests"].append({"requested_at": timestamp, "reviewer": reviewer, "note": comment})
+        state["research_requests"].append(
+            {
+                "requested_at": timestamp,
+                "reviewer": reviewer,
+                "note": comment,
+                "status": "pending",
+                "reviewed_at": None,
+            }
+        )
         _append_history(state, "research_requested", comment)
     else:
         _append_history(state, "human_decision", decision + (f" — {comment}" if comment else ""))
 
     _save(state_dir, state)
+    return state
+
+
+def get_pending_research_requests(state_dir: Path, tender_id: str) -> list[dict[str, Any]]:
+    """Read-only: every `research_requests` entry not yet marked "reviewed"
+    for this tender_id — `[]` when there is no state yet or nothing
+    pending, never fabricated. Older entries written before the `status`
+    field existed are treated as pending (status defaults to "pending" —
+    see record_human_decision), so nothing silently disappears."""
+    state = load_workflow_state(state_dir, tender_id)
+    if state is None:
+        return []
+    return [r for r in state.get("research_requests", []) if r.get("status", "pending") == "pending"]
+
+
+def mark_research_requests_reviewed(state_dir: Path, tender_id: str, detail: str | None = None) -> dict[str, Any]:
+    """Mark every currently-pending research request "reviewed" — meaning a
+    fresh qualification pass was actually re-run in response to it, NOT
+    that the underlying business question was confirmed resolved (that
+    would require real evidence in data/hpe_profile.json; see
+    src/mcp_server.py's `resume_after_research_request`, the only caller,
+    which reports exactly which UNKNOWNs are still unresolved alongside
+    this). A no-op (state unchanged) if there is no state yet or nothing
+    is pending."""
+    state = load_workflow_state(state_dir, tender_id)
+    if state is None:
+        return _new_state(tender_id)
+
+    timestamp = datetime.now(UTC).isoformat()
+    reviewed_count = 0
+    for request in state.get("research_requests", []):
+        if request.get("status", "pending") == "pending":
+            request["status"] = "reviewed"
+            request["reviewed_at"] = timestamp
+            reviewed_count += 1
+
+    if reviewed_count:
+        _append_history(state, "research_reviewed", detail or f"{reviewed_count} pending request(s) reviewed")
+        _save(state_dir, state)
     return state

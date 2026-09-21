@@ -45,7 +45,13 @@ from src.agents.executive_summary import build_executive_summary, render_executi
 from src.agents.feedback import record_feedback
 from src.agents.ingestion import extract_requirements as run_extraction
 from src.agents.workflow import WorkflowOrchestrator
-from src.agents.workflow_state import record_human_decision, update_state_after_qualification
+from src.agents.workflow_state import (
+    get_pending_research_requests,
+    load_workflow_state,
+    mark_research_requests_reviewed,
+    record_human_decision,
+    update_state_after_qualification,
+)
 from src.schemas.briefing import HumanDecision
 from src.schemas.tender import Tender, TenderSource
 
@@ -78,7 +84,12 @@ mcp = FastMCP(
         "elsewhere (e.g. via SIMAP-fixed), call it by tender_id directly: "
         "get_tender -> extract_requirements -> match_hpe_capabilities -> "
         "qualify_tender -> create_briefing -> submit_human_decision -> "
-        "create_draft. select_tenders (when used) is the explicit SELECT "
+        "create_draft. After a submit_human_decision(decision='more_research') "
+        "call, use resume_after_research_request(tender_id) to re-verify that "
+        "same tender (same documents/HPE profile, never a new search) and see "
+        "exactly which UNKNOWNs are now resolved vs. still open — never call "
+        "search_tenders/select_tenders to 'do the research' for a pending "
+        "request. select_tenders (when used) is the explicit SELECT "
         "phase: it scores every search_tenders candidate (relevance to the "
         "query, HPE capability fit, deadline, canton/location if given, "
         "document availability) and flags non-actionable ones (already "
@@ -902,6 +913,98 @@ def submit_human_decision(
         sources=sources,
         citations=payload["citations"],
         notes=[_provenance_note(tender.source.value)],
+        unknowns=payload["unknowns"],
+    )
+
+
+@mcp.tool()
+def resume_after_research_request(tender_id: str) -> dict[str, Any]:
+    """Re-verify a tender after a REQUEST MORE RESEARCH decision, without
+    launching any new/general search.
+
+    Looks the tender up the exact same way every other by-id tool does
+    (`_find_tender` — process cache, then the same local-registry fallback
+    `get_tender`/`qualify_tender` already use) and re-runs the unmodified
+    retrieve -> extract -> qualify pipeline (`_run_qualification`, the same
+    function `qualify_tender` calls) against that tender's already-known
+    documents/HPE profile — never `orchestrator.search(...)` with a query,
+    so this can never turn into a new general SIMAP/local search. If
+    `data/hpe_profile.json` hasn't changed since the last qualification,
+    the recomputed score/recommendation/unknowns are identical to before
+    (nothing here invents new HPE evidence or upgrades an UNKNOWN to
+    MATCH); if it *has* been given new sourced data, this simply reflects
+    that real change, exactly like calling qualify_tender again would.
+
+    Reports the difference against the previously persisted workflow_state
+    (if any) via `unknowns_resolved_since_last_check` (now-confirmed
+    matches, always empty unless new evidence was actually added) and
+    `unknowns_still_unresolved` — so a caller can see plainly that a
+    concern is still open rather than assuming it went away. Every
+    `research_requests` entry that was "pending" for this tender_id is
+    marked "reviewed" (meaning: a fresh check was actually performed in
+    response to it — not that it was confirmed resolved; see
+    `mark_research_requests_reviewed`'s docstring) and a `history` event is
+    appended; the prior `human_review`/`history` are preserved exactly as
+    `update_state_after_qualification` already guarantees.
+    """
+    orchestrator = _get_orchestrator()
+    tender = _find_tender(orchestrator, tender_id)
+    if tender is None:
+        return _error("resume_after_research_request", f"Unknown tender id: {tender_id!r}", tender_id=tender_id)
+
+    pending_before = get_pending_research_requests(WORKFLOW_STATE_DIR, tender_id)
+    previous_state = load_workflow_state(WORKFLOW_STATE_DIR, tender_id)
+    previous_unknowns = set(previous_state["unknowns"]) if previous_state else set()
+
+    try:
+        briefing_result = _run_qualification(orchestrator, tender)
+    except AdapterUnavailableError as exc:
+        return _documents_blocked(
+            "resume_after_research_request", tender, exc, briefing=None, qualification_status="BLOCKED"
+        )
+
+    state = update_state_after_qualification(WORKFLOW_STATE_DIR, briefing_result, qualification_status="COMPLETE")
+    new_unknowns = set(state["unknowns"])
+    resolved = sorted(previous_unknowns - new_unknowns)
+    still_unresolved = sorted(new_unknowns & previous_unknowns)
+
+    if pending_before:
+        state = mark_research_requests_reviewed(
+            WORKFLOW_STATE_DIR, tender_id, detail=f"{len(pending_before)} pending request(s) reviewed"
+        )
+
+    payload = _dump(briefing_result)
+    sources = sorted({c["document"] for c in payload["citations"]} | {"data/hpe_profile.json"})
+    exec_summary = build_executive_summary(briefing_result, qualification_status="COMPLETE")
+    if pending_before:
+        pending_note = f"{len(pending_before)} pending research request(s) reviewed."
+    else:
+        pending_note = (
+            "No pending research requests were recorded for this tender_id — qualification was "
+            "still recomputed for transparency."
+        )
+    notes = [
+        _provenance_note(tender.source.value),
+        (
+            "Re-verification reused this tender's already-retrieved documents and the current "
+            "data/hpe_profile.json — no new SIMAP/local search was performed."
+        ),
+        pending_note,
+    ]
+    return _ok(
+        "resume_after_research_request",
+        tender_id=tender_id,
+        briefing=payload,
+        qualification_status="COMPLETE",
+        executive_summary=exec_summary,
+        executive_card=render_executive_card(exec_summary),
+        workflow_state=state,
+        pending_research_requests_reviewed=len(pending_before),
+        unknowns_resolved_since_last_check=resolved,
+        unknowns_still_unresolved=still_unresolved,
+        sources=sources,
+        citations=payload["citations"],
+        notes=notes,
         unknowns=payload["unknowns"],
     )
 

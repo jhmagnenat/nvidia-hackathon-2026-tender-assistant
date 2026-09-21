@@ -1,0 +1,22 @@
+{
+  "company_name": "Hewlett Packard Enterprise",
+  "capabilities": [
+    { "name": "hybrid cloud", "description": "Hybrid cloud platforms and migration services. Cloud hybride, migration cloud, infrastructure cloud hybride." },
+    { "name": "managed cloud infrastructure", "description": "Managed operation of cloud/on-prem infrastructure. Infrastructure cloud gérée, exploitation infrastructure, hyperconvergée, sauvegarde, reprise après sinistre." },
+    { "name": "data center services", "description": "Data center design, hosting, and modernization. Centre de données, data center, hébergement, sauvegarde, reprise après sinistre." },
+    { "name": "networking", "description": "Enterprise networking and connectivity services. Réseau, réseau d'entreprise, connectivité, services réseau." },
+    { "name": "cybersecurity", "description": "Security services for infrastructure and data. Cybersécurité, sécurité, SOC, surveillance de sécurité, détection incidents." },
+    { "name": "AI infrastructure", "description": "Infrastructure for AI/ML workloads. Infrastructure IA, intelligence artificielle." },
+    { "name": "consulting", "description": "Technology consulting and advisory services. Conseil, accompagnement, feuille de route, stratégie." },
+    { "name": "technical support", "description": "Ongoing technical support and maintenance. Support technique, maintenance, assistance, incidents." },
+    { "name": "infrastructure modernization", "description": "Legacy infrastructure modernization projects. Modernisation infrastructure, renouvellement, hyperconvergée." },
+    { "name": "public-sector technology services", "description": "Technology services delivered to public-sector clients. Secteur public, administration cantonale, collectivités, communes." }
+  ],
+  "certifications": [],
+  "insurance_coverage_chf": null,
+  "references": [],
+  "annual_revenue_chf": null,
+  "employee_count": null,
+  "languages_supported": ["fr", "de", "en"],
+  "notes": "Illustrative capability list only, per hackathon MVP instructions. Certifications and references are intentionally empty (UNKNOWN) — add real entries here with a `citation` (source name/URL) rather than assuming HPE holds a given certification or Swiss reference. This file is the single editable source of truth for HPE-side matching; edit it directly to add real, sourced data."
+}

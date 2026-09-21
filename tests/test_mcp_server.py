@@ -959,12 +959,107 @@ def test_workflow_state_is_separated_between_tender_ids():
     assert cloud_state["score"] != cyber_state["score"]  # genuinely two independent tenders/scores
 
 
+# --- resume_after_research_request (re-verify without a new general search) -
+
+
+def test_resume_after_research_request_keeps_score_unchanged_without_new_evidence():
+    """Rule 7 -- no new evidence was added to data/hpe_profile.json between
+    the two calls, so the recomputed score/recommendation must be exactly
+    the same as the original qualification, not silently nudged."""
+    qualify_result = mcp_server.qualify_tender("cloud-infra-2026")
+    mcp_server.submit_human_decision(
+        "cloud-infra-2026", "more_research", reviewer="jj", notes="Confirm ISO/IEC 27001 status"
+    )
+
+    resume_result = mcp_server.resume_after_research_request("cloud-infra-2026")
+
+    assert resume_result["status"] == "ok"
+    assert resume_result["briefing"]["score"] == qualify_result["briefing"]["score"]
+    assert resume_result["briefing"]["recommendation"] == qualify_result["briefing"]["recommendation"]
+
+
+def test_resume_after_research_request_reports_still_unresolved_unknowns_not_invented_answers():
+    """Rules 5/6 -- since nothing about data/hpe_profile.json changed, the
+    ISO/IEC 27001 certification (and every other UNKNOWN) must still be
+    reported as unresolved -- never silently upgraded to MATCH."""
+    mcp_server.qualify_tender("cloud-infra-2026")
+    mcp_server.submit_human_decision("cloud-infra-2026", "more_research", reviewer="jj", notes="Check X")
+
+    result = mcp_server.resume_after_research_request("cloud-infra-2026")
+
+    assert result["unknowns_resolved_since_last_check"] == []
+    assert any("27001" in u.lower() for u in result["unknowns_still_unresolved"])
+    assert any("27001" in u.lower() for u in result["briefing"]["unknowns"])
+
+
+def test_resume_after_research_request_marks_pending_requests_reviewed_and_logs_history():
+    from src.agents.workflow_state import get_pending_research_requests
+
+    mcp_server.qualify_tender("cloud-infra-2026")
+    mcp_server.submit_human_decision("cloud-infra-2026", "more_research", reviewer="jj", notes="Check X")
+    assert len(get_pending_research_requests(mcp_server.WORKFLOW_STATE_DIR, "cloud-infra-2026")) == 1
+
+    result = mcp_server.resume_after_research_request("cloud-infra-2026")
+
+    assert result["pending_research_requests_reviewed"] == 1
+    assert get_pending_research_requests(mcp_server.WORKFLOW_STATE_DIR, "cloud-infra-2026") == []
+    events = [h["event"] for h in result["workflow_state"]["history"]]
+    assert "research_reviewed" in events
+
+
+def test_resume_after_research_request_preserves_prior_history_and_decision():
+    mcp_server.qualify_tender("cloud-infra-2026")
+    mcp_server.submit_human_decision("cloud-infra-2026", "more_research", reviewer="jj", notes="Check X")
+
+    result = mcp_server.resume_after_research_request("cloud-infra-2026")
+
+    # The earlier "more_research" decision is still on record, not erased
+    # or silently replaced by the re-verification pass.
+    assert result["workflow_state"]["human_review"]["decision"] == "more_research"
+    events = [h["event"] for h in result["workflow_state"]["history"]]
+    assert "research_requested" in events
+    assert "research_reviewed" in events
+
+
+def test_resume_after_research_request_never_triggers_a_new_general_search(monkeypatch):
+    """Rule 4 -- must reuse the exact same by-id lookup every other tool
+    uses, never call orchestrator.search() with a query string."""
+    orchestrator = mcp_server._get_orchestrator()
+    mcp_server.qualify_tender("cloud-infra-2026")  # populates the tender cache
+    mcp_server.submit_human_decision("cloud-infra-2026", "more_research", reviewer="jj", notes="Check X")
+
+    def fail_on_query_search(query, filters=None):
+        if query:
+            raise AssertionError(f"resume_after_research_request must never search with a query, got {query!r}")
+        return orchestrator.search_tool.search_tenders(query, filters)
+
+    monkeypatch.setattr(orchestrator, "search", fail_on_query_search)
+
+    result = mcp_server.resume_after_research_request("cloud-infra-2026")
+    assert result["status"] == "ok"
+
+
+def test_resume_after_research_request_unknown_tender_id():
+    result = mcp_server.resume_after_research_request("does-not-exist-2099")
+    assert result["status"] == "error"
+
+
+def test_resume_after_research_request_without_any_prior_state_still_qualifies():
+    """Calling it directly (no prior submit_human_decision) must not error
+    out -- it just has nothing pending to mark reviewed."""
+    result = mcp_server.resume_after_research_request("datacenter-modernization-2026")
+
+    assert result["status"] == "ok"
+    assert result["pending_research_requests_reviewed"] == 0
+    assert result["briefing"]["recommendation"] in {"GO", "MAYBE", "NO-GO"}
+
+
 @pytest.mark.parametrize(
     ("tender_id", "expected_score"),
     [
-        ("cloud-infra-2026", 61.1),
-        ("cybersec-managed-2026", 54.0),
-        ("datacenter-modernization-2026", 60.1),
+        ("cloud-infra-2026", 60.2),
+        ("cybersec-managed-2026", 53.1),
+        ("datacenter-modernization-2026", 59.3),
     ],
 )
 def test_qualify_tender_local_results_are_never_presented_as_live_simap(tender_id, expected_score):
@@ -972,9 +1067,16 @@ def test_qualify_tender_local_results_are_never_presented_as_live_simap(tender_i
     such: source_type is local_fallback, `notes` explicitly says this is NOT
     a live SIMAP connection, and `qualification_status` confirms the
     qualification actually completed (vs. the BLOCKED path used when
-    documents can't be retrieved at all). Also pins the exact scores already
-    confirmed working end-to-end via Hermes, so a future change can't shift
-    them unnoticed."""
+    documents can't be retrieved at all). Also pins the exact scores, so a
+    future change can't shift them unnoticed.
+
+    Values updated 2026-09-22 (was 61.1/54.0/60.1) by the minimal compatible
+    V4 integration (data/hpe_profile.json's `notes` field records the
+    decision): adding the sourced 'HPC and supercomputing' capability grew
+    `len(profile.capabilities)` from 10 to 11, and
+    src/agents/fit_scoring.py::_strategic_relevance divides by that count —
+    a disclosed, deterministic ~0.8-0.9 pt drop for every tender, not a
+    manual score edit. See tests/test_hpe_profile_v4_integration.py."""
     result = mcp_server.qualify_tender(tender_id)
 
     assert result["status"] == "ok"
@@ -1242,9 +1344,9 @@ def test_server_instructions_and_search_tools_warn_against_replacing_simap_fixed
         assert "do not call this tool" in normalized
 
 
-def test_mcp_stdio_protocol_exposes_all_nine_tools_and_answers_calls():
+def test_mcp_stdio_protocol_exposes_all_ten_tools_and_answers_calls():
     """Drive the real FastMCP server over an in-memory MCP ClientSession —
-    proves the nine tools are discoverable and callable via the MCP protocol
+    proves the ten tools are discoverable and callable via the MCP protocol
     itself (list_tools / call_tool), not just as plain Python functions —
     and that select_tenders isn't a duplicate of any existing tool name.
     """
@@ -1262,6 +1364,7 @@ def test_mcp_stdio_protocol_exposes_all_nine_tools_and_answers_calls():
                 "qualify_tender",
                 "create_briefing",
                 "submit_human_decision",
+                "resume_after_research_request",
                 "create_draft",
             }
             assert len(names) == len(tools.tools)  # every name genuinely unique — no duplicated tool
