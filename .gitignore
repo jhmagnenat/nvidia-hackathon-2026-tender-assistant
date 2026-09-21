@@ -50,6 +50,11 @@ data/briefings/
 # state, not a fixture)
 data/drafts/
 
+# Runtime-generated per-tender_id workflow state (score/recommendation/
+# human_review/research_requests/history), written by qualify_tender/
+# create_briefing/submit_human_decision (local demo state, not a fixture)
+data/workflow_state/
+
 # Streamlit secrets (unused by this app, but never commit if added later)
 .streamlit/secrets.toml
 

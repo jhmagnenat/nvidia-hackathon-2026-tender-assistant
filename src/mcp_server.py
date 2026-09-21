@@ -41,9 +41,11 @@ from src.adapters.tender_search import (
     get_search_adapters,
 )
 from src.agents import matching, tender_selection
+from src.agents.executive_summary import build_executive_summary, render_executive_card
 from src.agents.feedback import record_feedback
 from src.agents.ingestion import extract_requirements as run_extraction
 from src.agents.workflow import WorkflowOrchestrator
+from src.agents.workflow_state import record_human_decision, update_state_after_qualification
 from src.schemas.briefing import HumanDecision
 from src.schemas.tender import Tender, TenderSource
 
@@ -51,6 +53,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 BRIEFINGS_DIR = REPO_ROOT / "data" / "briefings"
 DRAFTS_DIR = REPO_ROOT / "data" / "drafts"
 FEEDBACK_LOG_PATH = REPO_ROOT / "data" / "feedback_log.json"
+# Persistent per-tender_id business state (rule: workflow state across
+# conversation turns) -- see src/agents/workflow_state.py. Deliberately a
+# separate file per tender_id from data/briefings/<id>.json (which
+# create_draft/_render_readiness_memo depend on in its exact existing raw
+# QualificationBriefing shape) -- this directory is additive only.
+WORKFLOW_STATE_DIR = REPO_ROOT / "data" / "workflow_state"
 
 mcp = FastMCP(
     "hpe-tender-qualification",
@@ -694,7 +702,28 @@ def qualify_tender(tender_id: str) -> dict[str, Any]:
     eligibility_gate + fit_scoring + briefing, all unmodified) via
     WorkflowOrchestrator.analyze_tender — no scoring rule is reimplemented
     here. Returns the resulting GO / MAYBE / NO-GO recommendation, score
-    breakdown, gaps, risks, and unknowns.
+    breakdown, gaps, risks, and unknowns, plus `qualification_status`
+    ("COMPLETE" here — a real qualification ran against retrieved documents;
+    see `_documents_blocked` for the "BLOCKED" counterpart when it couldn't).
+    `notes` always states this tender's true provenance (e.g. local sample
+    fixtures are explicitly labeled "NOT a live SIMAP connection") — a local
+    result is never presented as live SIMAP data. Also returns
+    `executive_summary` (src.agents.executive_summary.build_executive_summary
+    — a compact, deduplicated view of the same briefing: title/authority/
+    deadline/source_type/qualification_status/recommendation/score/
+    confidence/workflow_status/fit_signals/blockers/risks/next_actions/
+    human_review_status, nothing invented) and `executive_card` (its
+    deterministic ASCII rendering) — so a caller doesn't need to reconstruct
+    a short status view from the full `briefing` payload every time.
+
+    Also persists/updates `workflow_state` (src.agents.workflow_state.
+    update_state_after_qualification) — one JSON record per tender_id under
+    data/workflow_state/, surviving across conversation turns and separate
+    from data/briefings/<id>.json: score/recommendation/confidence/
+    source_type/qualification_status/blockers(full)/unknowns(full) are
+    refreshed from this run, while any earlier `human_review`/
+    `research_requests`/`history` already recorded for this tender_id are
+    preserved, never wiped.
     """
     orchestrator = _get_orchestrator()
     tender = _find_tender(orchestrator, tender_id)
@@ -708,10 +737,16 @@ def qualify_tender(tender_id: str) -> dict[str, Any]:
 
     payload = _dump(briefing_result)
     sources = sorted({c["document"] for c in payload["citations"]} | {"data/hpe_profile.json"})
+    exec_summary = build_executive_summary(briefing_result, qualification_status="COMPLETE")
+    state = update_state_after_qualification(WORKFLOW_STATE_DIR, briefing_result, qualification_status="COMPLETE")
     return _ok(
         "qualify_tender",
         tender_id=tender_id,
         briefing=payload,
+        qualification_status="COMPLETE",
+        executive_summary=exec_summary,
+        executive_card=render_executive_card(exec_summary),
+        workflow_state=state,
         sources=sources,
         citations=payload["citations"],
         notes=[_provenance_note(tender.source.value)],
@@ -747,10 +782,16 @@ def create_briefing(tender_id: str) -> dict[str, Any]:
     out_path.write_text(briefing_result.model_dump_json(indent=2), encoding="utf-8")
 
     sources = sorted({c["document"] for c in payload["citations"]} | {"data/hpe_profile.json"})
+    exec_summary = build_executive_summary(briefing_result, qualification_status="COMPLETE")
+    state = update_state_after_qualification(WORKFLOW_STATE_DIR, briefing_result, qualification_status="COMPLETE")
     return _ok(
         "create_briefing",
         tender_id=tender_id,
         briefing=payload,
+        qualification_status="COMPLETE",
+        executive_summary=exec_summary,
+        executive_card=render_executive_card(exec_summary),
+        workflow_state=state,
         saved_to=str(out_path.relative_to(REPO_ROOT)) if out_path.is_relative_to(REPO_ROOT) else str(out_path),
         sources=sources,
         citations=payload["citations"],
@@ -784,6 +825,14 @@ def submit_human_decision(
     attaches the review to it, appends an entry to data/feedback_log.json,
     and persists the reviewed briefing to data/briefings/<tender_id>.json —
     the same file create_briefing writes, now carrying the human_review field.
+
+    Also updates `workflow_state` (data/workflow_state/<tender_id>.json,
+    src.agents.workflow_state): qualification fields (score/recommendation/
+    confidence/blockers/unknowns) are refreshed from this fresh briefing,
+    then `human_review.status`/`decision`/`comment` are set and a `history`
+    event is appended — a "more_research" decision additionally appends to
+    `research_requests` without clearing anything already recorded (the
+    prior briefing/state is never erased by a research request).
     """
     if decision not in _VALID_DECISIONS:
         return _error(
@@ -828,11 +877,24 @@ def submit_human_decision(
     out_path.write_text(briefing_result.model_dump_json(indent=2), encoding="utf-8")
 
     sources = sorted({c["document"] for c in payload["citations"]} | {"data/hpe_profile.json"})
+    exec_summary = build_executive_summary(briefing_result, qualification_status="COMPLETE")
+    # Refresh the qualification-derived fields from this fresh briefing_result
+    # first (same as qualify_tender), THEN layer the human decision on top —
+    # so `recommendation`/`score` always reflect the deterministic
+    # qualification pipeline, never altered by the decision itself (rule:
+    # "conserver la recommandation originale"), while research_requests/
+    # history accumulate across calls rather than being overwritten.
+    state = update_state_after_qualification(WORKFLOW_STATE_DIR, briefing_result, qualification_status="COMPLETE")
+    state = record_human_decision(WORKFLOW_STATE_DIR, tender_id, decision, reviewer=reviewer, comment=notes)
     return _ok(
         "submit_human_decision",
         tender_id=tender_id,
         decision=decision,
         briefing=payload,
+        qualification_status="COMPLETE",
+        executive_summary=exec_summary,
+        executive_card=render_executive_card(exec_summary),
+        workflow_state=state,
         saved_to=str(out_path.relative_to(REPO_ROOT)) if out_path.is_relative_to(REPO_ROOT) else str(out_path),
         feedback_log=str(FEEDBACK_LOG_PATH.relative_to(REPO_ROOT))
         if FEEDBACK_LOG_PATH.is_relative_to(REPO_ROOT)

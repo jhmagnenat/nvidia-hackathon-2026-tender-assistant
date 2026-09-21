@@ -63,6 +63,18 @@ def _reset_tender_cache():
     mcp_server._tender_cache.clear()
 
 
+@pytest.fixture(autouse=True)
+def _sandbox_workflow_state_dir(tmp_path, monkeypatch):
+    """qualify_tender now persists workflow_state on every successful call
+    (see src/agents/workflow_state.py) — sandbox it for every test by
+    default, the same way individual tests already sandbox BRIEFINGS_DIR/
+    FEEDBACK_LOG_PATH, so no test writes into this repo's real
+    data/workflow_state/ directory. Tests that specifically exercise
+    workflow_state read `mcp_server.WORKFLOW_STATE_DIR` after this fixture
+    has already pointed it at a fresh per-test tmp_path."""
+    monkeypatch.setattr(mcp_server, "WORKFLOW_STATE_DIR", tmp_path / "workflow_state")
+
+
 def test_search_tenders_returns_local_sample_labeled_results():
     result = mcp_server.search_tenders("cloud infrastructure cybersecurity")
     assert result["status"] == "ok"
@@ -625,7 +637,7 @@ def test_qualify_tender_resolves_a_sample_id_even_when_the_generic_fallback_is_i
     result = mcp_server.qualify_tender("cloud-infra-2026")
 
     assert result["status"] == "ok"
-    assert "qualification_status" not in result  # a real qualification ran, not a BLOCKED stub
+    assert result["qualification_status"] == "COMPLETE"  # a real qualification ran, not a BLOCKED stub
     assert result["briefing"]["recommendation"] in {"GO", "MAYBE", "NO-GO"}
     assert result["briefing"]["tender"]["source_type"] == "local_fallback"
 
@@ -738,6 +750,239 @@ def test_qualify_tender_end_to_end_reuses_existing_scoring():
     assert 0 <= briefing["score"] <= 100
     assert result["citations"]
     assert "data/hpe_profile.json" in result["sources"]
+
+
+def test_qualify_tender_includes_a_compact_executive_summary_and_card():
+    """Hardening — qualify_tender must attach a compact, deterministic
+    executive_summary (and its ASCII rendering) alongside the full
+    `briefing`, so a caller (Hermes) doesn't need a long presentation
+    prompt to show a short, honest status. cloud-infra-2026's real cahier
+    des charges carries the ISO/IEC 27001 certification requirement twice
+    (once as the full mandatory sentence, once as the short CERTIFICATIONS
+    REQUISES bullet) -- both UNKNOWN against the shipped empty HPE profile
+    -- so this also exercises the dedup rule end to end, not just the unit
+    test in tests/agents/test_executive_summary.py."""
+    result = mcp_server.qualify_tender("cloud-infra-2026")
+
+    assert result["status"] == "ok"
+    summary = result["executive_summary"]
+    assert summary["title"] == result["briefing"]["tender"]["title"]
+    assert summary["recommendation"] == result["briefing"]["recommendation"]
+    assert summary["score"] == result["briefing"]["score"]
+
+    # Never presented as live SIMAP data -- this is the synthetic demo fixture.
+    assert summary["workflow_status"]["simap"] == "NOT_USED"
+    assert summary["workflow_status"]["local_fallback"] == "SYNTHETIC_SAMPLE"
+
+    # No prior human decision yet.
+    assert summary["human_review_status"] == "HUMAN_REVIEW_PENDING"
+
+    # Deduplication: ISO/IEC 27001 appears in the raw briefing twice
+    # (mandatory_requirements + required_certifications) but only once here.
+    iso_blockers = [b for b in summary["blockers"] if "iso" in b.lower() and "27001" in b.lower()]
+    assert len(iso_blockers) == 1
+    assert sum("27001" in u.lower() for u in result["briefing"]["unknowns"]) >= 2
+
+    # Limits are respected (rule 4).
+    assert len(summary["fit_signals"]) <= 4
+    assert len(summary["blockers"]) <= 4
+    assert len(summary["risks"]) <= 3
+    assert len(summary["next_actions"]) <= 3
+
+    card = result["executive_card"]
+    assert isinstance(card, str)
+    assert "SYNTHETIC_SAMPLE" in card
+    assert "LIVE_SIMAP" not in card
+    assert "HUMAN_REVIEW_PENDING" in card
+
+
+# --- executive_card hardening (Hermes single-prompt demo) -------------------
+# One dedicated test per rule-9 requirement, so each is independently traceable.
+
+
+def test_qualify_tender_executive_card_is_present():
+    result = mcp_server.qualify_tender("cloud-infra-2026")
+    assert result["status"] == "ok"
+    assert isinstance(result.get("executive_card"), str)
+    assert result["executive_card"]  # non-empty
+
+
+def test_qualify_tender_executive_card_shows_recommendation_and_score():
+    result = mcp_server.qualify_tender("cloud-infra-2026")
+    card = result["executive_card"]
+    briefing = result["briefing"]
+    assert f"RECOMMENDATION: {briefing['recommendation']}" in card
+    assert f"{briefing['score']:.1f}" in card or str(briefing["score"]) in card
+
+
+def test_qualify_tender_executive_card_shows_local_fallback_source():
+    """A local/synthetic tender's card must never read as live SIMAP data."""
+    result = mcp_server.qualify_tender("office-furniture-2026")
+    card = result["executive_card"]
+    assert "SOURCE_TYPE: local_fallback" in card
+    assert "LIVE_SIMAP" not in card
+
+
+def test_qualify_tender_executive_card_deduplicates_iso_27001():
+    result = mcp_server.qualify_tender("cloud-infra-2026")
+    card = result["executive_card"]
+    # The short "ISO/IEC 27001" bullet and the long mandatory sentence both
+    # mention "27001" for the same real requirement -- the card must only
+    # show one blocker line about it.
+    lines_mentioning_27001 = [line for line in card.splitlines() if "27001" in line]
+    assert len(lines_mentioning_27001) == 1
+
+
+def test_qualify_tender_executive_card_limits_blockers_to_four():
+    result = mcp_server.qualify_tender("cloud-infra-2026")
+    summary = result["executive_summary"]
+    blocker_lines = [line for line in result["executive_card"].splitlines() if line.strip().startswith(("✗", "?"))]
+    assert len(summary["blockers"]) <= 4
+    assert len(blocker_lines) <= 4
+
+
+def test_qualify_tender_executive_card_limits_capability_signals_to_four():
+    result = mcp_server.qualify_tender("cloud-infra-2026")
+    summary = result["executive_summary"]
+    signal_lines = [line for line in result["executive_card"].splitlines() if line.strip().startswith(("✓", "◐"))]
+    assert len(summary["fit_signals"]) <= 4
+    assert len(signal_lines) <= 4
+
+
+def test_qualify_tender_executive_card_preserves_unknown_distinct_from_no_match():
+    """Rule 9 ('UNKNOWN préservé') against real data: office-furniture-2026
+    has at least one confirmed NO_MATCH gap (5-year warranty -- no matching
+    HPE capability at all) and several UNKNOWN items (certification/legal/
+    reference -- HPE profile has no data to confirm or deny them). Both must
+    stay visible and distinguishable (✗ vs ?), never collapsed into one
+    generic marker."""
+    result = mcp_server.qualify_tender("office-furniture-2026")
+    summary = result["executive_summary"]
+
+    assert any(b.startswith("✗ ") for b in summary["blockers"])
+    assert any(b.startswith("? ") for b in summary["blockers"])
+
+    card = result["executive_card"]
+    assert any(line.strip().startswith("✗ ") for line in card.splitlines())
+    assert any(line.strip().startswith("? ") for line in card.splitlines())
+
+
+# --- workflow_state (persistent business state across conversation turns) ---
+
+
+def test_qualify_tender_creates_workflow_state():
+    result = mcp_server.qualify_tender("cloud-infra-2026")
+
+    assert result["status"] == "ok"
+    state = result["workflow_state"]
+    assert state["tender_id"] == "cloud-infra-2026"
+    assert state["source_type"] == "local_fallback"
+    assert state["qualification_status"] == "COMPLETE"
+    assert state["score"] == result["briefing"]["score"]
+    assert state["recommendation"] == result["briefing"]["recommendation"]
+
+    from src.agents.workflow_state import load_workflow_state
+
+    on_disk = load_workflow_state(mcp_server.WORKFLOW_STATE_DIR, "cloud-infra-2026")
+    assert on_disk == state
+
+
+def test_submit_human_decision_more_research_keeps_prior_briefing_state():
+    """Rule 3 -- a REQUEST MORE RESEARCH decision must not erase the
+    qualification already recorded, and must add a history event."""
+    qualify_result = mcp_server.qualify_tender("cybersec-managed-2026")
+    original_score = qualify_result["briefing"]["score"]
+    original_recommendation = qualify_result["briefing"]["recommendation"]
+
+    decision_result = mcp_server.submit_human_decision(
+        "cybersec-managed-2026", "more_research", reviewer="jj", notes="need a Swiss reference"
+    )
+
+    assert decision_result["status"] == "ok"
+    state = decision_result["workflow_state"]
+    assert state["score"] == original_score
+    assert state["recommendation"] == original_recommendation
+    assert state["human_review"]["decision"] == "more_research"
+    assert state["human_review"]["comment"] == "need a Swiss reference"
+    assert len(state["research_requests"]) == 1
+    assert state["research_requests"][0]["note"] == "need a Swiss reference"
+    assert "research_requested" in [h["event"] for h in state["history"]]
+
+
+def test_submit_human_decision_approve_preserves_briefing_and_persists_decision():
+    """Rule 4 -- APPROVE must keep the original recommendation and persist
+    the human decision + comment, with a history event."""
+    qualify_result = mcp_server.qualify_tender("datacenter-modernization-2026")
+    original_recommendation = qualify_result["briefing"]["recommendation"]
+    original_score = qualify_result["briefing"]["score"]
+
+    decision_result = mcp_server.submit_human_decision(
+        "datacenter-modernization-2026", "approved", reviewer="jj", notes="OK to bid"
+    )
+
+    assert decision_result["status"] == "ok"
+    state = decision_result["workflow_state"]
+    assert state["recommendation"] == original_recommendation
+    assert state["score"] == original_score
+    assert state["human_review"]["status"] == "HUMAN_REVIEW_APPROVED"
+    assert state["human_review"]["decision"] == "approved"
+    assert state["human_review"]["comment"] == "OK to bid"
+    assert "human_decision" in [h["event"] for h in state["history"]]
+
+    from src.agents.workflow_state import load_workflow_state
+
+    on_disk = load_workflow_state(mcp_server.WORKFLOW_STATE_DIR, "datacenter-modernization-2026")
+    assert on_disk["human_review"]["decision"] == "approved"
+
+
+def test_workflow_state_preserves_unknowns_end_to_end():
+    result = mcp_server.qualify_tender("cloud-infra-2026")
+    state = result["workflow_state"]
+
+    assert state["unknowns"] == result["briefing"]["unknowns"]
+    assert any("27001" in u.lower() for u in state["unknowns"])
+
+
+def test_workflow_state_is_separated_between_tender_ids():
+    mcp_server.submit_human_decision("cloud-infra-2026", "approved", reviewer="jj")
+    mcp_server.submit_human_decision("cybersec-managed-2026", "rejected", reviewer="jj")
+
+    from src.agents.workflow_state import load_workflow_state
+
+    cloud_state = load_workflow_state(mcp_server.WORKFLOW_STATE_DIR, "cloud-infra-2026")
+    cyber_state = load_workflow_state(mcp_server.WORKFLOW_STATE_DIR, "cybersec-managed-2026")
+
+    assert cloud_state["tender_id"] == "cloud-infra-2026"
+    assert cloud_state["human_review"]["decision"] == "approved"
+    assert cyber_state["tender_id"] == "cybersec-managed-2026"
+    assert cyber_state["human_review"]["decision"] == "rejected"
+    assert cloud_state["score"] != cyber_state["score"]  # genuinely two independent tenders/scores
+
+
+@pytest.mark.parametrize(
+    ("tender_id", "expected_score"),
+    [
+        ("cloud-infra-2026", 61.1),
+        ("cybersec-managed-2026", 54.0),
+        ("datacenter-modernization-2026", 60.1),
+    ],
+)
+def test_qualify_tender_local_results_are_never_presented_as_live_simap(tender_id, expected_score):
+    """Hardening — a local-corpus qualification must always self-identify as
+    such: source_type is local_fallback, `notes` explicitly says this is NOT
+    a live SIMAP connection, and `qualification_status` confirms the
+    qualification actually completed (vs. the BLOCKED path used when
+    documents can't be retrieved at all). Also pins the exact scores already
+    confirmed working end-to-end via Hermes, so a future change can't shift
+    them unnoticed."""
+    result = mcp_server.qualify_tender(tender_id)
+
+    assert result["status"] == "ok"
+    assert result["qualification_status"] == "COMPLETE"
+    assert result["briefing"]["tender"]["source_type"] == "local_fallback"
+    assert result["briefing"]["tender"]["source"] == "local_sample"
+    assert any("not a live simap" in n.lower() for n in result["notes"])
+    assert result["briefing"]["score"] == expected_score
 
 
 def test_qualify_tender_office_furniture_is_no_go():
@@ -978,7 +1223,7 @@ def test_local_fallback_qualification_is_unaffected_by_the_blocked_path():
     keep qualifying fully, exactly as before."""
     result = mcp_server.qualify_tender("cloud-infra-2026")
     assert result["status"] == "ok"
-    assert "qualification_status" not in result
+    assert result["qualification_status"] == "COMPLETE"
     assert "documents_status" not in result
     assert result["briefing"]["recommendation"] in {"GO", "MAYBE", "NO-GO"}
 
