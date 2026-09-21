@@ -35,7 +35,11 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from src.adapters import AdapterUnavailableError
-from src.adapters.tender_search import fetch_tender_details, get_search_adapters
+from src.adapters.tender_search import (
+    LocalSampleSearchAdapter,
+    fetch_tender_details,
+    get_search_adapters,
+)
 from src.agents import matching, tender_selection
 from src.agents.feedback import record_feedback
 from src.agents.ingestion import extract_requirements as run_extraction
@@ -51,26 +55,48 @@ FEEDBACK_LOG_PATH = REPO_ROOT / "data" / "feedback_log.json"
 mcp = FastMCP(
     "hpe-tender-qualification",
     instructions=(
-        "Tools for qualifying Swiss public tenders against the HPE capability "
-        "profile: search_tenders -> select_tenders -> get_tender -> "
-        "extract_requirements -> match_hpe_capabilities -> qualify_tender -> "
-        "create_briefing -> submit_human_decision -> create_draft. "
-        "select_tenders is the explicit SELECT phase: it scores every "
-        "search_tenders candidate (relevance to the query, HPE capability "
-        "fit, deadline, canton/location if given, document availability) and "
-        "flags non-actionable ones (already awarded, direct award not open, "
-        "expired, revoked, cancelled) via a real SIMAP status check — never "
-        "assuming NO-GO just because a status is unknown. Every tool returns "
-        "structured JSON with 'sources'/'citations'/'unknowns' fields; "
-        "unresolved facts are reported as UNKNOWN rather than guessed. Local "
-        "sample data (data/sample_tenders.json, data/hpe_profile.json) is "
-        "clearly labeled 'local_sample'/'local_fallback' and is never "
-        "presented as live SIMAP data. A recommendation (GO/MAYBE/NO-GO) is "
-        "never final on its own: always call submit_human_decision with the "
-        "reviewer's actual approved/rejected/more_research choice before "
-        "treating a tender as closed — never assume approval. create_draft "
-        "refuses to run unless that decision was 'approved' — a draft is "
-        "never produced without a recorded human approval."
+        "QUALIFIES a Swiss public tender against the HPE capability profile — "
+        "it does not replace live tender discovery. When a separate SIMAP "
+        "MCP server (e.g. 'simap-fixed') is also connected, that server is "
+        "the sole source for live tender search: do not call this server's "
+        "own search_tenders/select_tenders automatically after, or instead "
+        "of, a SIMAP-fixed search — they run their own adapter chain "
+        "(simap_bridge -> simap -> tavily -> local_sample) which can return "
+        "different candidates. Use them only to (a) score/rank a known "
+        "candidate set purely for HPE-capability fit, or (b) search when no "
+        "live SIMAP source is reachable at all (in that case, every result "
+        "is clearly labeled 'local_sample'/'local_fallback', never presented "
+        "as live SIMAP data). To qualify a tender already identified "
+        "elsewhere (e.g. via SIMAP-fixed), call it by tender_id directly: "
+        "get_tender -> extract_requirements -> match_hpe_capabilities -> "
+        "qualify_tender -> create_briefing -> submit_human_decision -> "
+        "create_draft. select_tenders (when used) is the explicit SELECT "
+        "phase: it scores every search_tenders candidate (relevance to the "
+        "query, HPE capability fit, deadline, canton/location if given, "
+        "document availability) and flags non-actionable ones (already "
+        "awarded, direct award not open, expired, revoked, cancelled) via a "
+        "real SIMAP status check — never assuming NO-GO just because a "
+        "status is unknown. This MVP's document retrieval only reads local "
+        "sample fixtures (data/sample_tenders/<id>/*.txt) — it does not yet "
+        "download real SIMAP documents. For a tender_id with no matching "
+        "local fixture (typical for a live SIMAP-fixed result), "
+        "extract_requirements/match_hpe_capabilities/qualify_tender/"
+        "create_briefing/submit_human_decision report "
+        "documents_status='NOT_RETRIEVED', confidence='LOW' "
+        "(qualification_status='BLOCKED' for the qualification tools), and "
+        "keep already-known SIMAP search-result metadata "
+        "('simap_metadata_facts') strictly separate from document-derived "
+        "facts (none) and UNKNOWN items — this is never presented as a "
+        "complete document analysis or a real GO/MAYBE/NO-GO recommendation. "
+        "Every tool returns structured JSON with 'sources'/'citations'/"
+        "'unknowns' fields; unresolved facts are reported as UNKNOWN rather "
+        "than guessed, and UNKNOWN is never silently upgraded to MATCH. A "
+        "recommendation (GO/MAYBE/NO-GO) is never final on its own: always "
+        "call submit_human_decision with the reviewer's actual "
+        "approved/rejected/more_research choice before treating a tender as "
+        "closed — never assume approval. create_draft refuses to run unless "
+        "that decision was 'approved' — a draft is never produced without a "
+        "recorded human approval."
     ),
 )
 
@@ -108,14 +134,40 @@ def _cache_tenders(tenders: list[Tender]) -> None:
 def _find_tender(orchestrator: WorkflowOrchestrator, tender_id: str) -> Tender | None:
     """Cache-first lookup — see `_tender_cache`'s module-level docstring.
 
-    Only falls back to a real `orchestrator.search("")` call on a cache miss,
-    and that fallback result is itself cached so a second miss never happens
-    for the same id within this process's lifetime.
+    Falls back to a real `orchestrator.search("")` call on a cache miss (and
+    caches that result, so a second miss never happens for the same id
+    within this process's lifetime) — but that call can resolve to a live
+    adapter (simap_bridge/simap) instead of local_sample whenever one is
+    `.available` (see `TenderSearchTool.search_tenders`: it only moves to
+    the next candidate on `AdapterUnavailableError`, not merely on "few/no
+    results"). When that happens, the synthetic demo fixtures in
+    data/sample_tenders.json are never reached by that call, so a known
+    sample id (e.g. "cloud-infra-2026") would incorrectly report "Unknown
+    tender id" even though its fixture is real and complete on disk.
+
+    Guaranteed last resort: query `LocalSampleSearchAdapter` directly (not
+    the live/priority-ordered chain) for the exact same registry
+    search_tenders/select_tenders already use as their own fallback, and
+    cache whatever it returns. This never calls a live adapter, never
+    fabricates a "live"/SIMAP tender (every result here is already labeled
+    source="local_sample" by data/sample_tenders.json itself), and never
+    changes which tender search_tenders/select_tenders present as live —
+    it only makes the always-available local registry reachable by id for
+    get_tender/extract_requirements/match_hpe_capabilities/qualify_tender/
+    create_briefing/submit_human_decision, exactly like it already is by
+    query.
     """
     cached = _tender_cache.get(tender_id)
     if cached is not None:
         return cached
     _cache_tenders(orchestrator.search(""))
+    cached = _tender_cache.get(tender_id)
+    if cached is not None:
+        return cached
+    try:
+        _cache_tenders(LocalSampleSearchAdapter().search(""))
+    except AdapterUnavailableError:
+        pass
     return _tender_cache.get(tender_id)
 
 
@@ -227,6 +279,77 @@ def _tender_citation(tender: Tender) -> dict[str, Any]:
     return {"document": document, "page": None, "section": None, "quote": None}
 
 
+# This MVP's only document retrieval adapter reads local sample fixtures
+# (data/sample_tenders/<id>/*.txt — see src/adapters/document_retrieval.py);
+# it does not download real SIMAP documents. A live SIMAP-sourced tender_id
+# (from search_tenders/select_tenders or an external SIMAP MCP server) has
+# no matching local folder, so DocumentRetrievalTool.retrieve_documents
+# raises AdapterUnavailableError for it — expected, not a bug. The tools
+# below must never present that as a completed document analysis: see
+# `_documents_blocked`.
+_DOCUMENT_RETRIEVAL_BLOCKED_NOTE = (
+    "Tender documents were not retrieved for this tender_id. This MVP's document "
+    "retrieval only reads local sample fixtures (data/sample_tenders/<id>/) — it "
+    "does not yet download real SIMAP documents, even when SIMAP itself reports "
+    "project documents as available (see get_tender's details.has_project_documents). "
+    "SIMAP/search-result metadata already known is reported separately under "
+    "simap_metadata_facts; every document-derived fact below is UNKNOWN. This is "
+    "NOT a complete document analysis, and no GO/MAYBE/NO-GO recommendation should "
+    "be inferred from it."
+)
+
+
+def _simap_metadata_facts(tender: Tender) -> dict[str, Any]:
+    """Facts already known from the tender's *search-result* metadata only —
+    never from a document, never inferred. Kept as an explicitly separate
+    block (vs. document-derived facts, which are empty here, and
+    inferences, which this deterministic pipeline never makes) so a blocked
+    document-dependent tool still surfaces what it honestly can."""
+    return {
+        "title": tender.title,
+        "buyer": tender.buyer,
+        "location": tender.location,
+        "publication_date": tender.publication_date.isoformat() if tender.publication_date else None,
+        "submission_deadline": tender.submission_deadline.isoformat() if tender.submission_deadline else None,
+        "url": tender.url,
+        "source_type": tender.source_type,
+        "publication_id": tender.publication_id,
+    }
+
+
+def _documents_blocked(tool: str, tender: Tender, exc: AdapterUnavailableError, **extra_fields: Any) -> dict[str, Any]:
+    """Structured, honest result for a document-dependent tool when this
+    tender's documents could not be retrieved (see
+    `_DOCUMENT_RETRIEVAL_BLOCKED_NOTE`) — used instead of a bare `_error()`
+    so the caller gets a machine-readable, non-fabricated result rather than
+    just a failure message: `documents_status`/`confidence` (and, for the
+    qualification tools, `qualification_status`) make the limitation
+    explicit, `simap_metadata_facts` keeps search-result metadata strictly
+    separate from document_facts (empty) and inferences (empty, this
+    pipeline never infers), and `unknowns` spells out exactly what remains
+    unresolved — never silently guessed or upgraded to a MATCH/recommendation.
+    `status` stays "ok": this is a legitimate, fully-described outcome, not
+    a tool failure.
+    """
+    return _ok(
+        tool,
+        tender_id=tender.id,
+        documents_status="NOT_RETRIEVED",
+        confidence="LOW",
+        simap_metadata_facts=_simap_metadata_facts(tender),
+        document_facts=[],
+        inferences=[],
+        sources=[tender.source.value],
+        citations=[_tender_citation(tender)],
+        notes=[_provenance_note(tender.source.value), _DOCUMENT_RETRIEVAL_BLOCKED_NOTE],
+        unknowns=[
+            str(exc),
+            "Mandatory/technical/commercial requirements: UNKNOWN (documents not retrieved).",
+        ],
+        **extra_fields,
+    )
+
+
 def _fetch_tender_details(tender: Tender) -> dict[str, Any]:
     """Real `get_tender_details` call for a SIMAP-sourced tender, using the
     exact project_id (`tender.id`) / publication_id propagated from its
@@ -278,6 +401,16 @@ def search_tenders(query: str) -> dict[str, Any]:
     sample index at data/sample_tenders.json. Each result's true `source` field
     ("simap" | "tavily" | "local_sample") is preserved — local sample results are
     never presented as if they came from a live SIMAP connection.
+
+    NOT the canonical live search when a dedicated SIMAP MCP server (e.g.
+    "simap-fixed") is also connected — that server is the single source of
+    truth for live tender discovery. Do not call this tool automatically
+    after, or as a substitute for, a SIMAP-fixed search: it can legitimately
+    return a different candidate set (this adapter chain, its own ranking).
+    Use it only when no live SIMAP source is reachable at all, or when
+    explicitly asked for HPE's own local/bridge search. To qualify a tender
+    already found via SIMAP-fixed, call get_tender/extract_requirements/
+    qualify_tender directly with its tender_id — no re-search needed here.
     """
     orchestrator = _get_orchestrator()
     try:
@@ -307,6 +440,14 @@ def search_tenders(query: str) -> dict[str, Any]:
 def select_tenders(query: str, cantons: list[str] | None = None, location: str | None = None) -> dict[str, Any]:
     """The explicit SELECT phase: search_tenders -> select_tenders ->
     get_tender -> qualification.
+
+    Same caveat as search_tenders: when a dedicated SIMAP MCP server (e.g.
+    "simap-fixed") is connected, it is the canonical live search — do not
+    call this tool automatically after, or instead of, a SIMAP-fixed
+    search. Use it to score/rank a known candidate set for HPE-capability
+    fit, or as the guaranteed local/bridge search when no live SIMAP source
+    is reachable. A tender already selected via SIMAP-fixed should go
+    straight to get_tender/extract_requirements/qualify_tender by tender_id.
 
     Searches (reusing search_tenders' exact machinery — same cache, same
     simap_bridge/simap/tavily/local_sample adapter chain, never a second
@@ -487,7 +628,7 @@ def extract_requirements(tender_id: str) -> dict[str, Any]:
     try:
         documents = orchestrator.retrieval_tool.retrieve_documents(tender)
     except AdapterUnavailableError as exc:
-        return _error("extract_requirements", str(exc), tender_id=tender_id)
+        return _documents_blocked("extract_requirements", tender, exc, extracted_requirements=None)
 
     extracted = run_extraction(tender, documents)
     payload = _dump(extracted)
@@ -521,7 +662,7 @@ def match_hpe_capabilities(tender_id: str) -> dict[str, Any]:
     try:
         documents = orchestrator.retrieval_tool.retrieve_documents(tender)
     except AdapterUnavailableError as exc:
-        return _error("match_hpe_capabilities", str(exc), tender_id=tender_id)
+        return _documents_blocked("match_hpe_capabilities", tender, exc, matches=[])
 
     extracted = run_extraction(tender, documents)
     matches = matching.match_all(extracted.all_requirements(), orchestrator.hpe_profile)
@@ -563,7 +704,7 @@ def qualify_tender(tender_id: str) -> dict[str, Any]:
     try:
         briefing_result = _run_qualification(orchestrator, tender)
     except AdapterUnavailableError as exc:
-        return _error("qualify_tender", str(exc), tender_id=tender_id)
+        return _documents_blocked("qualify_tender", tender, exc, briefing=None, qualification_status="BLOCKED")
 
     payload = _dump(briefing_result)
     sources = sorted({c["document"] for c in payload["citations"]} | {"data/hpe_profile.json"})
@@ -596,7 +737,9 @@ def create_briefing(tender_id: str) -> dict[str, Any]:
     try:
         briefing_result = _run_qualification(orchestrator, tender)
     except AdapterUnavailableError as exc:
-        return _error("create_briefing", str(exc), tender_id=tender_id)
+        return _documents_blocked(
+            "create_briefing", tender, exc, briefing=None, qualification_status="BLOCKED", saved_to=None
+        )
 
     payload = _dump(briefing_result)
     BRIEFINGS_DIR.mkdir(parents=True, exist_ok=True)
@@ -657,7 +800,19 @@ def submit_human_decision(
     try:
         briefing_result = _run_qualification(orchestrator, tender)
     except AdapterUnavailableError as exc:
-        return _error("submit_human_decision", str(exc), tender_id=tender_id)
+        # No briefing exists to attach a decision to — nothing is recorded
+        # to feedback_log.json/data/briefings, unlike the success path below.
+        return _documents_blocked(
+            "submit_human_decision",
+            tender,
+            exc,
+            decision=decision,
+            decision_recorded=False,
+            briefing=None,
+            qualification_status="BLOCKED",
+            saved_to=None,
+            feedback_log=None,
+        )
 
     record_feedback(
         briefing_result,

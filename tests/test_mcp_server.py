@@ -584,6 +584,64 @@ def test_get_tender_local_fallback_behavior_is_completely_unchanged():
     assert "details" not in result
 
 
+def _make_live_search_intercept_the_generic_fallback(monkeypatch):
+    """Regression setup for the "Unknown tender id" bug: in the NemoClaw
+    sandbox, orchestrator.search("") can resolve to a live adapter
+    (simap_bridge/simap) instead of local_sample whenever one reports
+    itself `.available` — TenderSearchTool only moves to the next candidate
+    on AdapterUnavailableError, never merely on "few/no results" (see
+    src/agents/search.py). That live call returning e.g. no results for an
+    empty query means the synthetic sample fixtures in
+    data/sample_tenders.json are never reached by _find_tender's generic
+    fallback, even though data/sample_tenders/<id>/ is real and complete on
+    disk. Simulated here by monkeypatching the shared orchestrator's own
+    `.search` to behave exactly like that interception, without needing a
+    real live adapter."""
+    orchestrator = mcp_server._get_orchestrator()
+    monkeypatch.setattr(orchestrator, "search", lambda query, filters=None: [])
+
+
+def test_get_tender_resolves_a_sample_id_even_when_the_generic_fallback_is_intercepted(monkeypatch):
+    """Requirement — get_tender("cloud-infra-2026") must not report "Unknown
+    tender id" just because a live adapter intercepted the generic
+    orchestrator.search("") fallback: the local sample registry
+    (data/sample_tenders.json) is always reachable by id as a last resort."""
+    _make_live_search_intercept_the_generic_fallback(monkeypatch)
+
+    result = mcp_server.get_tender("cloud-infra-2026")
+
+    assert result["status"] == "ok"
+    assert result["tender"]["id"] == "cloud-infra-2026"
+    assert result["tender"]["source"] == "local_sample"
+    assert result["tender"]["source_type"] == "local_fallback"  # never disguised as live
+
+
+def test_qualify_tender_resolves_a_sample_id_even_when_the_generic_fallback_is_intercepted(monkeypatch):
+    """Same bug, through qualify_tender — the tool actually reported broken
+    in Hermes/NemoClaw ("Unknown tender id" for cloud-infra-2026 despite the
+    fixture files being present and readable)."""
+    _make_live_search_intercept_the_generic_fallback(monkeypatch)
+
+    result = mcp_server.qualify_tender("cloud-infra-2026")
+
+    assert result["status"] == "ok"
+    assert "qualification_status" not in result  # a real qualification ran, not a BLOCKED stub
+    assert result["briefing"]["recommendation"] in {"GO", "MAYBE", "NO-GO"}
+    assert result["briefing"]["tender"]["source_type"] == "local_fallback"
+
+
+def test_get_tender_unknown_id_still_reports_unknown_even_after_the_local_sample_fallback(monkeypatch):
+    """The new last-resort local_sample lookup must not mask a genuinely
+    unknown id — it only ever matches an exact id already present in
+    data/sample_tenders.json, never a fuzzy/nearest match."""
+    _make_live_search_intercept_the_generic_fallback(monkeypatch)
+
+    result = mcp_server.get_tender("does-not-exist-2099")
+
+    assert result["status"] == "error"
+    assert "Unknown tender id" in result["message"]
+
+
 def test_repeated_tool_calls_for_the_same_tender_do_not_repeat_the_search_call(monkeypatch):
     """Reliability constraint — never repeat the same MCP call unnecessarily:
     processing one tender through get_tender -> extract_requirements ->
@@ -822,6 +880,121 @@ def test_submit_human_decision_unknown_tender_id(tmp_path, monkeypatch):
 
     assert result["status"] == "error"
     assert list(tmp_path.glob("*.json")) == []
+
+
+def _live_simap_tender_with_no_local_documents() -> Tender:
+    """A SIMAP-sourced tender shaped exactly like a real SIMAP-fixed search
+    result (source=SIMAP, research_mode=SIMAP_MCP, publication_id present) —
+    it will never have a data/sample_tenders/<id>/ folder, since this MVP's
+    only document retrieval adapter reads local fixtures, not real SIMAP
+    documents (see src/adapters/document_retrieval.py). Used to exercise the
+    documents-blocked path deterministically, without mocking anything."""
+    return _simap_tender(tender_id="PRJ-live-no-docs")
+
+
+def test_extract_requirements_reports_blocked_not_a_bare_error_for_live_simap_tender():
+    tender = _live_simap_tender_with_no_local_documents()
+    mcp_server._tender_cache[tender.id] = tender
+
+    result = mcp_server.extract_requirements(tender.id)
+
+    assert result["status"] == "ok"  # a legitimate, fully-described outcome, not a tool failure
+    assert result["documents_status"] == "NOT_RETRIEVED"
+    assert result["confidence"] == "LOW"
+    assert result["extracted_requirements"] is None
+    # metadata facts (from the search result) vs document facts vs inferences, kept separate.
+    assert result["simap_metadata_facts"]["title"] == tender.title
+    assert result["simap_metadata_facts"]["source_type"] == "simap_mcp"
+    assert result["simap_metadata_facts"]["publication_id"] == tender.publication_id
+    assert result["document_facts"] == []
+    assert result["inferences"] == []
+    assert result["unknowns"]
+    assert any("not retrieved" in n.lower() or "not a complete document analysis" in n.lower() for n in result["notes"])
+
+
+def test_match_hpe_capabilities_reports_blocked_with_no_fabricated_matches():
+    tender = _live_simap_tender_with_no_local_documents()
+    mcp_server._tender_cache[tender.id] = tender
+
+    result = mcp_server.match_hpe_capabilities(tender.id)
+
+    assert result["status"] == "ok"
+    assert result["documents_status"] == "NOT_RETRIEVED"
+    assert result["confidence"] == "LOW"
+    assert result["matches"] == []  # never a fabricated MATCH/UNKNOWN list without real requirements
+    assert result["simap_metadata_facts"]["title"] == tender.title
+
+
+def test_qualify_tender_reports_blocked_with_no_invented_recommendation():
+    tender = _live_simap_tender_with_no_local_documents()
+    mcp_server._tender_cache[tender.id] = tender
+
+    result = mcp_server.qualify_tender(tender.id)
+
+    assert result["status"] == "ok"
+    assert result["qualification_status"] == "BLOCKED"
+    assert result["documents_status"] == "NOT_RETRIEVED"
+    assert result["confidence"] == "LOW"
+    assert result["briefing"] is None  # no GO/MAYBE/NO-GO invented without documents
+    assert result["simap_metadata_facts"]["title"] == tender.title
+
+
+def test_create_briefing_blocked_writes_no_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(mcp_server, "BRIEFINGS_DIR", tmp_path)
+    tender = _live_simap_tender_with_no_local_documents()
+    mcp_server._tender_cache[tender.id] = tender
+
+    result = mcp_server.create_briefing(tender.id)
+
+    assert result["status"] == "ok"
+    assert result["qualification_status"] == "BLOCKED"
+    assert result["briefing"] is None
+    assert result["saved_to"] is None
+    assert list(tmp_path.glob("*.json")) == []  # no partial/fake briefing ever persisted
+
+
+def test_submit_human_decision_blocked_records_nothing(tmp_path, monkeypatch):
+    monkeypatch.setattr(mcp_server, "BRIEFINGS_DIR", tmp_path)
+    log_path = tmp_path / "feedback_log.json"
+    monkeypatch.setattr(mcp_server, "FEEDBACK_LOG_PATH", log_path)
+    tender = _live_simap_tender_with_no_local_documents()
+    mcp_server._tender_cache[tender.id] = tender
+
+    result = mcp_server.submit_human_decision(tender.id, "approved", reviewer="jj")
+
+    assert result["status"] == "ok"
+    assert result["qualification_status"] == "BLOCKED"
+    assert result["decision_recorded"] is False
+    assert result["briefing"] is None
+    assert result["saved_to"] is None
+    assert result["feedback_log"] is None
+    assert list(tmp_path.glob("*.json")) == []  # nothing written to data/briefings
+    assert not log_path.exists()  # no decision recorded on a qualification that never ran
+
+
+def test_local_fallback_qualification_is_unaffected_by_the_blocked_path():
+    """Regression: the documents-blocked path only triggers on a real
+    AdapterUnavailableError — local_fallback tenders with real fixtures
+    keep qualifying fully, exactly as before."""
+    result = mcp_server.qualify_tender("cloud-infra-2026")
+    assert result["status"] == "ok"
+    assert "qualification_status" not in result
+    assert "documents_status" not in result
+    assert result["briefing"]["recommendation"] in {"GO", "MAYBE", "NO-GO"}
+
+
+def test_server_instructions_and_search_tools_warn_against_replacing_simap_fixed():
+    """Rule — SIMAP-fixed stays the sole live-search source: this server's
+    own instructions and search_tenders/select_tenders docstrings must tell
+    Hermes not to auto-chain them after/instead of a SIMAP-fixed search."""
+    instructions = " ".join(mcp_server.mcp.instructions.lower().split())
+    assert "simap-fixed" in instructions
+    assert "do not call this server's" in instructions or "do not call this tool" in instructions
+
+    for doc in (mcp_server.search_tenders.__doc__, mcp_server.select_tenders.__doc__):
+        normalized = " ".join(doc.lower().split())
+        assert "simap-fixed" in normalized
+        assert "do not call this tool" in normalized
 
 
 def test_mcp_stdio_protocol_exposes_all_nine_tools_and_answers_calls():
