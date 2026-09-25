@@ -1,0 +1,668 @@
+{
+  "profile_metadata": {
+    "provider": "Hewlett Packard Enterprise",
+    "short_name": "HPE",
+    "profile_version": "research-1",
+    "researched_at": "2026-09-22",
+    "source_policy": "official_sources_preferred"
+  },
+  "provider": {
+    "type": "technology_infrastructure_and_it_services_provider",
+    "description": "Global edge-to-cloud IT infrastructure and services company (NYSE: HPE), formed 2015-11-01 from the split of the original Hewlett-Packard Company. HQ in Spring, Texas. Offers compute, storage, networking, hybrid/private cloud, HPC/AI infrastructure, and related professional/managed services.",
+    "official_sources": [
+      "https://www.hpe.com/us/en/about/enterprise-technology-us.html",
+      "https://www.hpe.com/us/en/newsroom/press-release/2021/06/hewlett-packard-enterprise-announces-breakthrough-hpe-greenlake-cloud-platform-innovations-spanning-silicon-software-and-security-to-power-edge-to-cloud-era.html",
+      "https://www.hpe.com/us/en/newsroom/press-release/2025/06/hpe-unveils-new-ai-factory-solutions-built-with-nvidia-to-accelerate-ai-adoption-at-global-scale.html",
+      "https://hpe.com/us/en/newsroom/press-release/2021/04/swiss-national-supercomputing-centre-hewlett-packard-enterprise-and-nvidia-announce-worlds-most-powerful-ai-capable-supercomputer.html"
+    ]
+  },
+  "capabilities": [
+    {
+      "capability_id": "compute_infrastructure",
+      "capability_name": "Compute and server infrastructure",
+      "category": "Compute",
+      "description": "General-purpose and workload-optimized servers (ProLiant, Synergy, Superdome Flex, Integrity).",
+      "tender_keywords": [
+        "server",
+        "compute",
+        "rack server",
+        "data center hardware"
+      ],
+      "typical_deliverables": [
+        "server hardware supply",
+        "compute lifecycle management"
+      ],
+      "HPE_products_or_platforms": [
+        "HPE ProLiant",
+        "HPE Synergy",
+        "HPE Superdome Flex"
+      ],
+      "capability_strength": "CORE",
+      "evidence_status": "PARTIALLY_VERIFIED",
+      "evidence_sources": [
+        "https://kavout.com/stocks/nyse-hpe/hewlett-packard-enterprise-co"
+      ],
+      "limitations": "Secondary financial-data source, not hpe.com directly; recommend cross-check. Downgraded from VERIFIED_PUBLIC to PARTIALLY_VERIFIED: no official HPE/certification-body source among the evidence for this claim.",
+      "partner_or_subcontractor_dependency": "NO"
+    },
+    {
+      "capability_id": "storage_infrastructure",
+      "capability_name": "Storage and data infrastructure",
+      "category": "Storage",
+      "description": "Storage arrays and AI-driven storage management (Alletra, InfoSight, CloudPhysics).",
+      "tender_keywords": [
+        "storage",
+        "data protection",
+        "backup infrastructure"
+      ],
+      "typical_deliverables": [
+        "storage hardware supply",
+        "storage management software"
+      ],
+      "HPE_products_or_platforms": [
+        "HPE Alletra",
+        "HPE InfoSight"
+      ],
+      "capability_strength": "CORE",
+      "evidence_status": "PARTIALLY_VERIFIED",
+      "evidence_sources": [
+        "https://kavout.com/stocks/nyse-hpe/hewlett-packard-enterprise-co"
+      ],
+      "limitations": "Secondary source; cross-check on hpe.com recommended. Downgraded from VERIFIED_PUBLIC to PARTIALLY_VERIFIED: no official HPE/certification-body source among the evidence for this claim.",
+      "partner_or_subcontractor_dependency": "NO"
+    },
+    {
+      "capability_id": "enterprise_networking",
+      "capability_name": "Enterprise networking",
+      "category": "Networking",
+      "description": "Wi-Fi, switching, SD-WAN, network security/analytics (Aruba); Juniper Networks acquisition announced Jan 2024.",
+      "tender_keywords": [
+        "networking",
+        "Wi-Fi",
+        "SD-WAN",
+        "switches"
+      ],
+      "typical_deliverables": [
+        "network hardware",
+        "network management software"
+      ],
+      "HPE_products_or_platforms": [
+        "HPE Aruba Networking"
+      ],
+      "capability_strength": "CORE",
+      "evidence_status": "PARTIALLY_VERIFIED",
+      "evidence_sources": [
+        "https://sp-edge.com/companies/341503"
+      ],
+      "limitations": "Secondary source. Downgraded from VERIFIED_PUBLIC to PARTIALLY_VERIFIED: no official HPE/certification-body source among the evidence for this claim.",
+      "partner_or_subcontractor_dependency": "NO"
+    },
+    {
+      "capability_id": "hybrid_private_cloud",
+      "capability_name": "Hybrid and private cloud",
+      "category": "Cloud",
+      "description": "HPE GreenLake platform: unified management across compute, storage, networking, workloads, edge-to-cloud.",
+      "tender_keywords": [
+        "hybrid cloud",
+        "private cloud",
+        "as-a-service",
+        "consumption-based IT"
+      ],
+      "typical_deliverables": [
+        "hybrid cloud platform deployment",
+        "consumption-based IT services"
+      ],
+      "HPE_products_or_platforms": [
+        "HPE GreenLake"
+      ],
+      "capability_strength": "CORE",
+      "evidence_status": "VERIFIED_PUBLIC",
+      "evidence_sources": [
+        "https://ics.com.ph/product-details/hpe-greenlake-edge-to-cloud-platform",
+        "https://developer.hpe.com/platform/hpe-greenlake/home/"
+      ],
+      "limitations": "None material.",
+      "partner_or_subcontractor_dependency": "NO"
+    },
+    {
+      "capability_id": "ai_infrastructure",
+      "capability_name": "AI infrastructure and GPU infrastructure",
+      "category": "AI",
+      "description": "Turnkey 'AI factory' infrastructure (HPE Private Cloud AI) built with NVIDIA Blackwell GPUs; supports air-gapped/sovereign deployments and GPU fractionalization.",
+      "tender_keywords": [
+        "AI infrastructure",
+        "GPU",
+        "AI factory",
+        "sovereign AI",
+        "private AI"
+      ],
+      "typical_deliverables": [
+        "turnkey AI infrastructure deployment",
+        "AI platform integration"
+      ],
+      "HPE_products_or_platforms": [
+        "HPE Private Cloud AI",
+        "HPE ProLiant Compute Gen12",
+        "HPE Compute XD690"
+      ],
+      "capability_strength": "STRONG",
+      "evidence_status": "VERIFIED_PUBLIC",
+      "evidence_sources": [
+        "https://www.hpe.com/us/en/newsroom/press-release/2025/06/hpe-unveils-new-ai-factory-solutions-built-with-nvidia-to-accelerate-ai-adoption-at-global-scale.html"
+      ],
+      "limitations": "No Swiss-specific deployment evidence found beyond CSCS (which is HPC, not this product line).",
+      "partner_or_subcontractor_dependency": "YES"
+    },
+    {
+      "capability_id": "hpc_supercomputing",
+      "capability_name": "High-performance computing and supercomputing",
+      "category": "HPC",
+      "description": "HPE Cray EX supercomputer product line; basis of the CSCS 'Alps' system in Switzerland.",
+      "tender_keywords": [
+        "HPC",
+        "supercomputing",
+        "scientific computing"
+      ],
+      "typical_deliverables": [
+        "supercomputer design, delivery and integration"
+      ],
+      "HPE_products_or_platforms": [
+        "HPE Cray EX"
+      ],
+      "capability_strength": "CORE",
+      "evidence_status": "VERIFIED_PUBLIC",
+      "evidence_sources": [
+        "https://hpe.com/us/en/newsroom/press-release/2021/04/swiss-national-supercomputing-centre-hewlett-packard-enterprise-and-nvidia-announce-worlds-most-powerful-ai-capable-supercomputer.html",
+        "https://www.hpcwire.com/?p=175578"
+      ],
+      "limitations": "Directly comparable only to HPC/scientific-computing tenders, not general enterprise IT.",
+      "partner_or_subcontractor_dependency": "UNKNOWN"
+    },
+    {
+      "capability_id": "it_operations_observability",
+      "capability_name": "IT operations, observability, CloudOps/AIOps",
+      "category": "IT Operations",
+      "description": "OpsRamp observability software; GreenLake Intelligence 'agentic AI mesh' for hybrid IT operations.",
+      "tender_keywords": [
+        "observability",
+        "AIOps",
+        "IT operations management"
+      ],
+      "typical_deliverables": [
+        "observability platform deployment"
+      ],
+      "HPE_products_or_platforms": [
+        "HPE OpsRamp",
+        "GreenLake Intelligence"
+      ],
+      "capability_strength": "STRONG",
+      "evidence_status": "VERIFIED_PUBLIC",
+      "evidence_sources": [
+        "https://www.hpe.com/se/en/legal.html"
+      ],
+      "limitations": "Sourced from a regional legal/marketing page, not a dedicated product page.",
+      "partner_or_subcontractor_dependency": "NO"
+    },
+    {
+      "capability_id": "managed_services",
+      "capability_name": "Managed services",
+      "category": "Managed Services",
+      "description": "HPE Managed Services / Enterprise Services unit; ISO/IEC 27001, ISO/IEC 20000, ISO 9001 certified globally as of 2015 across 450+ locations.",
+      "tender_keywords": [
+        "managed services",
+        "IT outsourcing"
+      ],
+      "typical_deliverables": [
+        "managed IT operations"
+      ],
+      "HPE_products_or_platforms": [],
+      "capability_strength": "CONTEXT_DEPENDENT",
+      "evidence_status": "PARTIALLY_VERIFIED",
+      "evidence_sources": [
+        "https://www.bsigroup.com/en-US/about-bsi/Media-Center/Press-Releases/2015/november/BSI-announces-Hewlett-Packard-Enterprise-achieves-global-ISO-standards-certifications-for-Quality-Security-and-Service-Management/"
+      ],
+      "limitations": "Certification dated 2015; current validity and Swiss inclusion not confirmed.",
+      "partner_or_subcontractor_dependency": "UNKNOWN"
+    },
+    {
+      "capability_id": "backup_data_protection",
+      "capability_name": "Backup and data protection",
+      "category": "Data Protection",
+      "description": "Zerto (HPE subsidiary since 2021): continuous data protection, ransomware resilience, workload mobility.",
+      "tender_keywords": [
+        "backup",
+        "disaster recovery",
+        "ransomware resilience"
+      ],
+      "typical_deliverables": [
+        "backup/DR software deployment"
+      ],
+      "HPE_products_or_platforms": [
+        "Zerto"
+      ],
+      "capability_strength": "STRONG",
+      "evidence_status": "PARTIALLY_VERIFIED",
+      "evidence_sources": [
+        "https://en.wikipedia.org/wiki/Zerto"
+      ],
+      "limitations": "Sourced from Wikipedia; confirm on hpe.com/zerto.com before use in a bid.",
+      "partner_or_subcontractor_dependency": "NO"
+    }
+  ],
+  "services": [
+    {
+      "service": "AI factory delivery and integration",
+      "capability_status": "STRONG",
+      "evidence": "VERIFIED_PUBLIC",
+      "tender_relevance": "High for AI infrastructure tenders",
+      "sources": [
+        {
+          "title": "HPE unveils new AI factory solutions built with NVIDIA",
+          "url": "https://www.hpe.com/us/en/newsroom/press-release/2025/06/hpe-unveils-new-ai-factory-solutions-built-with-nvidia-to-accelerate-ai-adoption-at-global-scale.html",
+          "publisher": "HPE",
+          "accessed_at": "2026-09-22",
+          "source_type": "official_press_release",
+          "claims_supported": [
+            "ai_infrastructure"
+          ]
+        }
+      ]
+    },
+    {
+      "service": "HPC system delivery and integration",
+      "capability_status": "CORE",
+      "evidence": "VERIFIED_PUBLIC",
+      "tender_relevance": "High for HPC/scientific tenders, with a named Swiss reference (CSCS)",
+      "sources": [
+        {
+          "title": "Swiss National Supercomputing Centre, HPE and NVIDIA announce world's most powerful AI-capable supercomputer",
+          "url": "https://hpe.com/us/en/newsroom/press-release/2021/04/swiss-national-supercomputing-centre-hewlett-packard-enterprise-and-nvidia-announce-worlds-most-powerful-ai-capable-supercomputer.html",
+          "publisher": "HPE",
+          "accessed_at": "2026-09-22",
+          "source_type": "official_press_release",
+          "claims_supported": [
+            "hpc_supercomputing",
+            "public_sector_references"
+          ]
+        }
+      ]
+    },
+    {
+      "service": "Global managed services (Enterprise Services unit)",
+      "capability_status": "CONTEXT_DEPENDENT",
+      "evidence": "PARTIALLY_VERIFIED",
+      "tender_relevance": "Medium; must confirm current certification scope",
+      "sources": [
+        {
+          "title": "BSI announces Hewlett Packard Enterprise achieves global ISO standards certifications",
+          "url": "https://www.bsigroup.com/en-US/about-bsi/Media-Center/Press-Releases/2015/november/BSI-announces-Hewlett-Packard-Enterprise-achieves-global-ISO-standards-certifications-for-Quality-Security-and-Service-Management/",
+          "publisher": "BSI Group",
+          "accessed_at": "2026-09-22",
+          "source_type": "certification_body_press_release",
+          "claims_supported": [
+            "certifications",
+            "managed_services"
+          ]
+        }
+      ]
+    }
+  ],
+  "products_and_platforms": [
+    {
+      "name": "HPE GreenLake",
+      "category": "Hybrid cloud / consumption platform",
+      "source": "https://developer.hpe.com/platform/hpe-greenlake/home/"
+    },
+    {
+      "name": "HPE Private Cloud AI",
+      "category": "AI infrastructure",
+      "source": "https://www.hpe.com/us/en/newsroom/press-release/2025/06/hpe-unveils-new-ai-factory-solutions-built-with-nvidia-to-accelerate-ai-adoption-at-global-scale.html"
+    },
+    {
+      "name": "HPE Cray EX",
+      "category": "HPC / supercomputing",
+      "source": "https://hpe.com/us/en/newsroom/press-release/2021/04/swiss-national-supercomputing-centre-hewlett-packard-enterprise-and-nvidia-announce-worlds-most-powerful-ai-capable-supercomputer.html"
+    },
+    {
+      "name": "HPE Aruba Networking",
+      "category": "Networking",
+      "source": "https://sp-edge.com/companies/341503"
+    },
+    {
+      "name": "HPE Alletra / InfoSight",
+      "category": "Storage",
+      "source": "https://kavout.com/stocks/nyse-hpe/hewlett-packard-enterprise-co"
+    },
+    {
+      "name": "Zerto",
+      "category": "Backup / disaster recovery",
+      "source": "https://en.wikipedia.org/wiki/Zerto"
+    }
+  ],
+  "context_dependent_areas": [
+    {
+      "area": "AI application development",
+      "status": "CONTEXT_DEPENDENT",
+      "note": "HPE provides AI infrastructure and partner blueprints, not confirmed bespoke app development"
+    },
+    {
+      "area": "Custom software development",
+      "status": "UNKNOWN"
+    },
+    {
+      "area": "Generic cybersecurity consulting",
+      "status": "CONTEXT_DEPENDENT",
+      "note": "Embedded product security (e.g., CrowdStrike on Private Cloud AI) found; standalone consulting not confirmed"
+    },
+    {
+      "area": "SOC operations",
+      "status": "UNKNOWN"
+    },
+    {
+      "area": "SIEM operations",
+      "status": "UNKNOWN"
+    },
+    {
+      "area": "Data science consulting",
+      "status": "CONTEXT_DEPENDENT"
+    },
+    {
+      "area": "Digital workplace services",
+      "status": "UNKNOWN"
+    },
+    {
+      "area": "Generic staffing",
+      "status": "UNKNOWN"
+    },
+    {
+      "area": "Business application implementation",
+      "status": "UNKNOWN"
+    },
+    {
+      "area": "Telecommunications services",
+      "status": "CONTEXT_DEPENDENT",
+      "note": "Supplies networking/telco infrastructure but is not itself an operator"
+    },
+    {
+      "area": "Cloud hyperscaler resale or operation",
+      "status": "UNKNOWN"
+    },
+    {
+      "area": "Local Swiss managed operations",
+      "status": "UNKNOWN",
+      "note": "Swiss office/branch presence confirmed; dedicated managed-ops team not confirmed"
+    }
+  ],
+  "out_of_scope_categories": [
+    {
+      "category": "Construction / civil engineering / building architecture / public works",
+      "status": "NO_MATCH"
+    },
+    {
+      "category": "Transportation",
+      "status": "NO_MATCH"
+    },
+    {
+      "category": "Catering",
+      "status": "NO_MATCH"
+    },
+    {
+      "category": "Agriculture",
+      "status": "NO_MATCH"
+    },
+    {
+      "category": "Hospitality",
+      "status": "NO_MATCH"
+    },
+    {
+      "category": "Legal services",
+      "status": "NO_MATCH"
+    },
+    {
+      "category": "Medical equipment (manufacturing)",
+      "status": "NO_MATCH"
+    },
+    {
+      "category": "Non-IT logistics",
+      "status": "NO_MATCH"
+    },
+    {
+      "category": "Generic non-IT procurement",
+      "status": "NO_MATCH"
+    }
+  ],
+  "certifications": [
+    {
+      "certification_name": "ISO/IEC 27001, ISO/IEC 20000, ISO 9001",
+      "scope": "Information security, IT service management, quality management",
+      "holder": "HPE Managed Services unit (global, as of 2015)",
+      "geography": "Global, 450+ locations across six continents (Switzerland inclusion not confirmed)",
+      "validity_date": "Certified November 2015; current validity not confirmed",
+      "certification_body": "BSI Group",
+      "official_evidence_url": "https://www.bsigroup.com/en-US/about-bsi/Media-Center/Press-Releases/2015/november/BSI-announces-Hewlett-Packard-Enterprise-achieves-global-ISO-standards-certifications-for-Quality-Security-and-Service-Management/",
+      "evidence_status": "PARTIALLY_VERIFIED",
+      "limitations": "Company-wide claim not independently re-verified as current; scope defined by BSI, an accredited certification body, not by HPE marketing."
+    },
+    {
+      "certification_name": "ISO 9001:2015, ISO/IEC 27001:2022",
+      "scope": "Sales, supply chain, services/support for servers, storage, networking, hybrid cloud, data-centre solutions",
+      "holder": "Hewlett Packard Enterprise operated by Selectium Adriatics d.o.o. (HPE representative in Slovenia)",
+      "geography": "Slovenia",
+      "validity_date": "Approved 2024-03-29",
+      "certification_body": "Not specified in source",
+      "official_evidence_url": "https://midisgroup.com/hewlett-packard-enterprise-operated-by-selectium-slovenia-achieves-iso-90012015-and-iso-iec-270012022",
+      "evidence_status": "PARTIALLY_VERIFIED",
+      "limitations": "Applies to Selectium (Slovenia) only, not to HPE globally or to any Swiss entity. Downgraded from VERIFIED_PUBLIC to PARTIALLY_VERIFIED: no official HPE/certification-body source among the evidence for this claim."
+    }
+  ],
+  "geographic_coverage": [
+    {
+      "topic": "Global availability",
+      "status": "PARTIALLY_VERIFIED",
+      "detail": "HPE products/services marketed as available globally across clouds/edges",
+      "source": "https://hewlett-packard-enterprise.prezly.com/en/search",
+      "detail_limitation": "Downgraded from VERIFIED_PUBLIC to PARTIALLY_VERIFIED: no official HPE/certification-body source among the evidence for this claim."
+    },
+    {
+      "topic": "Swiss office presence",
+      "status": "PARTIALLY_VERIFIED",
+      "detail": "EMEA HQ campus ('The Hive') in Meyrin-Satigny, Geneva, hosting both HP Inc. and HPE staff (~430 combined employees, 2017)",
+      "source": "https://www.s-ge.com/ko/node/2672",
+      "detail_limitation": "Downgraded from VERIFIED_PUBLIC to PARTIALLY_VERIFIED: no official HPE/certification-body source among the evidence for this claim."
+    },
+    {
+      "topic": "Swiss legal entity capability for a specific tender",
+      "status": "UNKNOWN",
+      "detail": "Not established by this research",
+      "source": ""
+    }
+  ],
+  "legal_entities": [
+    {
+      "entity_name": "Hewlett-Packard International Sàrl",
+      "registration_number_uid": "CHE-105.574.243",
+      "lei": "54930040DPIZKNKO5U07",
+      "registered_office": "Route du Nant-d'Avril 150, 1217 Meyrin, Geneva, Switzerland",
+      "incorporation_date": "2002-10-31",
+      "parent_entity_per_register": "Hewlett Packard Enterprise Company (listed as direct parent in a Dec 2024 register entry per a commercial-register data aggregator)",
+      "status": "LEGAL_ENTITY_FOUND",
+      "legal_eligibility_status": "LEGAL_ELIGIBILITY_UNKNOWN",
+      "evidence_status": "PARTIALLY_VERIFIED",
+      "source": "https://www.northdata.com/Hewlett-Packard%20International%20S%C3%A0rl,%20Meyrin/CHE-105.574.243",
+      "limitations": "Sourced from a secondary aggregator (North Data) of official Zefix/Handelsregister data, not a first-hand Zefix query; entity name does not literally contain 'Enterprise'. Recommend direct zefix.ch confirmation before use in a tender submission."
+    }
+  ],
+  "public_sector_references": [
+    {
+      "customer_name": "Swiss National Supercomputing Centre (CSCS) / ETH Zürich",
+      "industry": "Scientific research / public sector (federally linked research infrastructure)",
+      "geography": "Lugano, Switzerland",
+      "project_scope": "Design, delivery and integration of the 'Alps' supercomputer based on HPE Cray EX architecture with NVIDIA Grace Hopper Superchips",
+      "technologies_or_services": [
+        "HPE Cray EX",
+        "NVIDIA Grace Hopper Superchips",
+        "HPC"
+      ],
+      "date": "Announced 2021-04; inaugurated 2024-09-14",
+      "source_url": "https://hpe.com/us/en/newsroom/press-release/2021/04/swiss-national-supercomputing-centre-hewlett-packard-enterprise-and-nvidia-announce-worlds-most-powerful-ai-capable-supercomputer.html",
+      "directly_comparable_to_swiss_tender": "Yes, for HPC/scientific-computing tenders; not for general administrative IT tenders",
+      "evidence_status": "VERIFIED_PUBLIC"
+    }
+  ],
+  "delivery_capabilities": [
+    {
+      "capability": "GreenLake unified fleet/lifecycle management",
+      "status": "PARTIALLY_VERIFIED",
+      "evidence": "hpe.com GreenLake platform description",
+      "limitation": "Does not establish Swiss-specific SLAs Downgraded from VERIFIED_PUBLIC to PARTIALLY_VERIFIED: no official HPE/certification-body source among the evidence for this claim.",
+      "source": "https://ics.com.ph/product-details/hpe-greenlake-edge-to-cloud-platform"
+    },
+    {
+      "capability": "24/7 support / service desks / specific SLAs",
+      "status": "UNKNOWN",
+      "evidence": "",
+      "limitation": "Not researched in this pass",
+      "source": ""
+    },
+    {
+      "capability": "Local Swiss delivery/support staffing",
+      "status": "UNKNOWN",
+      "evidence": "",
+      "limitation": "Only office/branch presence confirmed, not staffing levels",
+      "source": ""
+    }
+  ],
+  "commercial_models": [
+    {
+      "model": "Consumption-based / as-a-service (HPE GreenLake)",
+      "status": "VERIFIED_PUBLIC",
+      "source": "https://developer.hpe.com/platform/hpe-greenlake/home/"
+    },
+    {
+      "model": "IT financing / leasing / asset management (HPE Financial Services)",
+      "status": "PARTIALLY_VERIFIED",
+      "source": "https://kavout.com/stocks/nyse-hpe/hewlett-packard-enterprise-co"
+    }
+  ],
+  "qualification_rules": {
+    "unknown_is_not_match": true,
+    "technical_fit_does_not_prove_eligibility": true,
+    "unsupported_claims_are_forbidden": true,
+    "mandatory_unknown_caps_recommendation_at": "MAYBE"
+  },
+  "unknowns": [
+    "Exact HPE legal entity that would contract for a specific Swiss public tender",
+    "Swiss-specific certification status (ISO 27001/9001/20000) for any HPE Swiss entity",
+    "Financial capacity, insurance coverage, and BöB/LMP procurement eligibility",
+    "Local Swiss delivery team size, staffing, and specific SLA commitments",
+    "Current (2026) validity of the 2015 global Managed Services ISO certification",
+    "Whether 'Hewlett-Packard International Sàrl' is the operative HPE entity for Swiss public tenders, or whether a different/newer entity exists"
+  ],
+  "sources": [
+    {
+      "title": "Enterprise technology in the United States",
+      "url": "https://www.hpe.com/us/en/about/enterprise-technology-us.html",
+      "publisher": "HPE",
+      "accessed_at": "2026-09-22",
+      "source_type": "official_company_page",
+      "claims_supported": [
+        "provider_identity",
+        "core_capabilities"
+      ]
+    },
+    {
+      "title": "HPE GreenLake cloud platform innovations press release",
+      "url": "https://www.hpe.com/us/en/newsroom/press-release/2021/06/hewlett-packard-enterprise-announces-breakthrough-hpe-greenlake-cloud-platform-innovations-spanning-silicon-software-and-security-to-power-edge-to-cloud-era.html",
+      "publisher": "HPE",
+      "accessed_at": "2026-09-22",
+      "source_type": "official_press_release",
+      "claims_supported": [
+        "hybrid_private_cloud"
+      ]
+    },
+    {
+      "title": "HPE unveils new AI factory solutions built with NVIDIA",
+      "url": "https://www.hpe.com/us/en/newsroom/press-release/2025/06/hpe-unveils-new-ai-factory-solutions-built-with-nvidia-to-accelerate-ai-adoption-at-global-scale.html",
+      "publisher": "HPE",
+      "accessed_at": "2026-09-22",
+      "source_type": "official_press_release",
+      "claims_supported": [
+        "ai_infrastructure"
+      ]
+    },
+    {
+      "title": "Swiss National Supercomputing Centre, HPE and NVIDIA announce world's most powerful AI-capable supercomputer",
+      "url": "https://hpe.com/us/en/newsroom/press-release/2021/04/swiss-national-supercomputing-centre-hewlett-packard-enterprise-and-nvidia-announce-worlds-most-powerful-ai-capable-supercomputer.html",
+      "publisher": "HPE",
+      "accessed_at": "2026-09-22",
+      "source_type": "official_press_release",
+      "claims_supported": [
+        "hpc_supercomputing",
+        "public_sector_references"
+      ]
+    },
+    {
+      "title": "BSI announces Hewlett Packard Enterprise achieves global ISO standards certifications",
+      "url": "https://www.bsigroup.com/en-US/about-bsi/Media-Center/Press-Releases/2015/november/BSI-announces-Hewlett-Packard-Enterprise-achieves-global-ISO-standards-certifications-for-Quality-Security-and-Service-Management/",
+      "publisher": "BSI Group",
+      "accessed_at": "2026-09-22",
+      "source_type": "certification_body_press_release",
+      "claims_supported": [
+        "certifications",
+        "managed_services"
+      ]
+    },
+    {
+      "title": "Hewlett Packard Enterprise operated by Selectium (Slovenia) achieves ISO 9001:2015 and ISO/IEC 27001:2022",
+      "url": "https://midisgroup.com/hewlett-packard-enterprise-operated-by-selectium-slovenia-achieves-iso-90012015-and-iso-iec-270012022",
+      "publisher": "Midis Group",
+      "accessed_at": "2026-09-22",
+      "source_type": "secondary_press_release",
+      "claims_supported": [
+        "certifications"
+      ]
+    },
+    {
+      "title": "Hewlett-Packard International Sàrl, Meyrin, Switzerland (CHE-105.574.243)",
+      "url": "https://www.northdata.com/Hewlett-Packard%20International%20S%C3%A0rl,%20Meyrin/CHE-105.574.243",
+      "publisher": "North Data (aggregator of Swiss Handelsregister/Zefix data)",
+      "accessed_at": "2026-09-22",
+      "source_type": "commercial_register_aggregator",
+      "claims_supported": [
+        "legal_entities"
+      ]
+    },
+    {
+      "title": "Enterprise technology in the United States (HP EMEA HQ Geneva)",
+      "url": "https://www.s-ge.com/ko/node/2672",
+      "publisher": "Switzerland Global Enterprise",
+      "accessed_at": "2026-09-22",
+      "source_type": "secondary_public_source",
+      "claims_supported": [
+        "geographic_coverage"
+      ]
+    },
+    {
+      "title": "Hewlett Packard Enterprise Co. company profile",
+      "url": "https://kavout.com/stocks/nyse-hpe/hewlett-packard-enterprise-co",
+      "publisher": "Kavout",
+      "accessed_at": "2026-09-22",
+      "source_type": "secondary_financial_data",
+      "claims_supported": [
+        "compute_infrastructure",
+        "storage_infrastructure",
+        "commercial_models"
+      ]
+    },
+    {
+      "title": "Zerto (Wikipedia)",
+      "url": "https://en.wikipedia.org/wiki/Zerto",
+      "publisher": "Wikipedia",
+      "accessed_at": "2026-09-22",
+      "source_type": "secondary_reference",
+      "claims_supported": [
+        "backup_data_protection"
+      ]
+    }
+  ]
+}

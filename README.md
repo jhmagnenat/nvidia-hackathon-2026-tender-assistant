@@ -13,6 +13,41 @@ See [CHALLENGE.md](./CHALLENGE.md) for the official brief,
 [IMPLEMENTATION_LOG.md](./IMPLEMENTATION_LOG.md) for what was actually built,
 what's a fallback vs. a real integration, and why.
 
+## Context
+
+Built during the **HPE & NVIDIA Agentic AI Hackathon 2026** (Swiss AI Weeks),
+on the **NVIDIA LaunchPad** environment. That LaunchPad environment is no
+longer available — this repo is preserved as a final snapshot and is **not
+reproducible as-is** outside it (see the availability notes below and
+`NVIDIA_AUDIT.md` for exactly which NVIDIA/agentic components were and
+weren't actually reachable at the time).
+
+**What it does:** given a natural-language query, the assistant searches
+Swiss public tenders (SIMAP, with a deterministic local-sample fallback),
+retrieves and parses each tender's documents, extracts structured
+requirements, matches them against an editable, sourced HPE capability
+profile, and produces a transparent, cited GO/MAYBE/NO-GO qualification
+briefing with a human-approval step — never inventing a certification,
+reference, or match without evidence.
+
+**Tech stack:** Python 3.11+, Pydantic (data contracts), Streamlit (UI),
+the `mcp` package (Model Context Protocol server for Hermes/NemoClaw
+integration), deterministic keyword-based matching (no LLM call in the
+scoring/matching path — see `src/agents/matching.py`), pytest + ruff.
+
+**Key files for anyone picking this back up:**
+- [`IMPLEMENTATION_LOG.md`](./IMPLEMENTATION_LOG.md) — phase-by-phase build
+  log: what was built, what's a fallback vs. a real integration, and why.
+- [`NVIDIA_AUDIT.md`](./NVIDIA_AUDIT.md) — read-only audit of which
+  NVIDIA/agentic components (NeMo Agent Toolkit, AIQ Blueprint, MCP, etc.)
+  were actually installed/reachable in the LaunchPad environment, vs. only
+  documented/aspirational.
+- [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) — condensed business goal,
+  service provider (HPE), and main workflow.
+- [`docs/AGENT_CONTEXT.md`](./docs/AGENT_CONTEXT.md) — short operational
+  reference for any agent (human or LLM) driving the MCP tools: workflow,
+  qualification rules, evidence policy, UNKNOWN handling.
+
 ## Business workflow
 
 ```
